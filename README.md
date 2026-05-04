@@ -2,7 +2,7 @@
 
 DeployDoctor helps developers understand why a Vercel deployment failed and what to try next.
 
-This repository is currently at **Milestone 3**: a Next.js App Router demo with server-side diagnosis and DB-backed public share pages. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. The MVP input is pasted logs only.
+This repository is currently at **Milestone 4**: a deployed-ready Next.js App Router demo with server-side diagnosis, DB-backed public share pages, and Vercel build verification. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. The MVP input is pasted logs only.
 
 ## Local Setup
 
@@ -30,7 +30,33 @@ To enable saved share links, add:
 POSTGRES_URL=your_vercel_postgres_or_neon_connection_string
 ```
 
-Diagnosis still works without `POSTGRES_URL`; only saving/share links return a friendly configuration error.
+Vercel Postgres and Neon integrations may also expose a project-prefixed `depdoc_POSTGRES_URL`; DeployDoctor supports either variable. Diagnosis still works without a Postgres URL; only saving/share links return a friendly configuration error.
+
+## Vercel Deployment
+
+The project is linked to Vercel as `deploydoctor` and deployed at:
+
+```bash
+https://deploydoctor.vercel.app
+```
+
+Configure these production environment variables in Vercel:
+
+```bash
+CEREBRAS_API_KEY=your_key_here
+CEREBRAS_MODEL=gpt-oss-120b
+POSTGRES_URL=your_vercel_postgres_or_neon_connection_string
+```
+
+`POSTGRES_URL` can be replaced by `depdoc_POSTGRES_URL` when using the current prefixed integration variables.
+
+Vercel uses `vercel.json` to run:
+
+```bash
+pnpm test && pnpm lint && pnpm typecheck && pnpm build
+```
+
+This keeps tests, lint, typecheck, and the production Next.js build in the deployment workflow. The current production deployment has passed those checks.
 
 ## Available Commands
 
@@ -77,6 +103,5 @@ Creates a production Next.js build.
 
 ## Not Implemented Yet
 
-- Vercel deployment import.
 - Auth.
 - Dashboard or saved-diagnosis editing.

@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 3 is a Next.js App Router app with server-side diagnosis and DB-backed public share pages. Diagnosis calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. Sharing requires `POSTGRES_URL`; diagnosis still works without it.
+Milestone 4 is a Vercel-ready Next.js App Router app with server-side diagnosis, DB-backed public share pages, and deployment-time verification. Diagnosis calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. Sharing requires `POSTGRES_URL` or `depdoc_POSTGRES_URL`; diagnosis still works without either variable.
 
 ## Diagnosis Contract
 
@@ -39,6 +39,10 @@ Milestone 3 is a Next.js App Router app with server-side diagnosis and DB-backed
 
 The DB stores `shareId`, `createdAt`, `category`, `generatedBy`, `title`, `summary`, and `diagnosis_json`. It does not store raw logs, pasted input, prompts, or analytics.
 
-## Future Seams
+## Deployment Flow
 
-- Deployment polish should configure `POSTGRES_URL`, `CEREBRAS_API_KEY`, and `CEREBRAS_MODEL` in Vercel.
+1. Vercel installs dependencies with pnpm.
+2. `vercel.json` runs `pnpm test && pnpm lint && pnpm typecheck && pnpm build`.
+3. The deployment fails if tests, lint, typecheck, or the production Next.js build fail.
+4. Production should define `CEREBRAS_API_KEY`, optional `CEREBRAS_MODEL`, and either `POSTGRES_URL` or `depdoc_POSTGRES_URL`.
+5. The production deployment is aliased at `https://deploydoctor.vercel.app`.

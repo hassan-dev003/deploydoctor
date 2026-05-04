@@ -29,8 +29,6 @@ Status: implemented in this repository.
 - [x] Add mock fallback when `CEREBRAS_API_KEY` is missing or the model call fails.
 - [x] Add tests for API validation, redaction-before-model, Cerebras output, and fallback behavior.
 
-## Next Milestones
-
 ### Milestone 3: DB-Backed Saved/Share Pages
 
 Status: implemented in this repository.
@@ -46,9 +44,13 @@ Status: implemented in this repository.
 
 ### Milestone 4: Deployment On Vercel
 
-- [ ] Configure production environment variables.
-- [ ] Deploy the app on Vercel.
-- [ ] Verify build, lint, tests, and typecheck in the deployment workflow.
+Status: implemented in this repository.
+
+- [x] Configure production environment variables.
+- [x] Link and deploy the app on Vercel.
+- [x] Verify build, lint, tests, and typecheck in the deployment workflow.
+
+## Next Milestones
 
 ### Milestone 5: Demo Polish
 
