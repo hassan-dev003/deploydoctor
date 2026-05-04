@@ -59,6 +59,34 @@ describe("POST /api/incidents", () => {
     vi.unstubAllEnvs();
   });
 
+  it("accepts sample log source type", async () => {
+    vi.stubEnv("CEREBRAS_API_KEY", "");
+
+    const response = await incidentsPost(
+      jsonRequest("/api/incidents", {
+        log: "Type error: TS2322",
+        sourceType: "sample_log"
+      })
+    );
+    const incident = IncidentReportSchema.parse(await response.json());
+
+    expect(response.status).toBe(200);
+    expect(incident.sourceType).toBe("sample_log");
+
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects unsupported source type", async () => {
+    const response = await incidentsPost(
+      jsonRequest("/api/incidents", {
+        log: "Type error: TS2322",
+        sourceType: "deployment_url"
+      })
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("keeps legacy diagnosis API working", async () => {
     vi.stubEnv("CEREBRAS_API_KEY", "");
 

@@ -27,7 +27,7 @@ Milestone 6 is a paste-first Vercel deployment incident analyst. It keeps the ex
 8. Server wraps the diagnosis in `IncidentReport`.
 9. UI renders timeline, evidence cards, repair plan, safe actions, and legacy diagnosis details.
 
-`POST /api/diagnoses` remains available for legacy clients and still returns `DiagnosisResult`.
+`sourceType` is `pasted_log` for manually entered logs and `sample_log` when the homepage sample buttons populate the textarea. `POST /api/diagnoses` remains available for legacy clients and still returns `DiagnosisResult`.
 
 ## Share Flow
 

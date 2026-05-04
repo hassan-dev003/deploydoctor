@@ -15,7 +15,7 @@ pnpm dev
 
 Open the local URL printed by Next.js, usually `http://localhost:3000`.
 
-To enable AI diagnosis, add:
+To enable AI incident analysis, add:
 
 ```bash
 CEREBRAS_API_KEY=your_key_here
@@ -30,7 +30,7 @@ To enable saved share links, add:
 POSTGRES_URL=your_vercel_postgres_or_neon_connection_string
 ```
 
-Vercel Postgres and Neon integrations may also expose a project-prefixed `depdoc_POSTGRES_URL`; DeployDoctor supports either variable. Diagnosis still works without a Postgres URL; only saving/share links return a friendly configuration error.
+Vercel Postgres and Neon integrations may also expose a project-prefixed `depdoc_POSTGRES_URL`; DeployDoctor supports either variable. Incident analysis still works without a Postgres URL; only saving/share links return a friendly configuration error.
 
 ## Vercel Deployment
 
@@ -70,7 +70,7 @@ Starts the local Next.js development server.
 pnpm test
 ```
 
-Runs Vitest tests for diagnosis, redaction, classification, and sharing behavior.
+Runs Vitest tests for incident reports, diagnosis, redaction, classification, and sharing behavior.
 
 ```bash
 pnpm lint
@@ -99,7 +99,7 @@ https://deploydoctor.vercel.app
 ```
 
 1. Choose a sample log such as `Missing Production env var`, `Case-sensitive import failure`, or `Lockfile mismatch`.
-2. Click `Analyze pasted log` and point out the investigation timeline, evidence cards, repair plan, safe actions, and legacy diagnosis details.
+2. Click `Analyze incident` and point out the investigation timeline, evidence cards, repair plan, safe actions, and legacy diagnosis details.
 3. Click `Share incident` and open the generated `/i/[shareId]` page.
 4. Explain that the shared page stores only sanitized incident report JSON, not the pasted raw log.
 5. For a fallback demo, run without `CEREBRAS_API_KEY` locally and repeat the same flow; the UI shape stays the same with `generatedBy: mock`.
@@ -121,7 +121,7 @@ See `docs/DEMO.md` for a 60-90 second hackathon video checklist.
 ## Not Implemented Yet
 
 - Auth.
-- Dashboard or saved-diagnosis editing.
+- Dashboard or saved-report editing.
 - Reading private Vercel logs from public deployment URLs.
 - Vercel account connection or OAuth.
 - GitHub diff inspection or PR generation.

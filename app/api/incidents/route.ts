@@ -3,13 +3,15 @@ import { z } from "zod";
 import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
 import { generateServerDiagnosis } from "@/lib/diagnosis/generateServerDiagnosis";
 import { generateIncidentReport } from "@/lib/incidents/generateIncidentReport";
+import { IncidentSourceTypeSchema } from "@/lib/incidents/schema";
 
 const IncidentRequestSchema = z.object({
   log: z
     .string()
     .trim()
     .min(1, "Paste deployment logs before running an incident analysis.")
-    .max(MAX_LOG_CHARS, oversizedLogMessage)
+    .max(MAX_LOG_CHARS, oversizedLogMessage),
+  sourceType: IncidentSourceTypeSchema.optional()
 });
 
 export async function POST(request: Request) {
@@ -31,7 +33,9 @@ export async function POST(request: Request) {
   }
 
   const diagnosis = await generateServerDiagnosis(parsed.data.log);
-  const incident = generateIncidentReport(diagnosis);
+  const incident = generateIncidentReport(diagnosis, undefined, {
+    sourceType: parsed.data.sourceType ?? "pasted_log"
+  });
 
   return NextResponse.json(incident);
 }

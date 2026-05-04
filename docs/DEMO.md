@@ -5,7 +5,7 @@
 1. Open `https://deploydoctor.vercel.app`.
 2. Say: "DeployDoctor turns failed Vercel build logs into evidence-backed incident reports."
 3. Click the `Missing Production env var` sample and point out that the log is fake and sanitized.
-4. Click `Analyze pasted log`.
+4. Click `Analyze incident`.
 5. Show the incident report: timeline, evidence cards, repair plan, safe actions, and legacy diagnosis details.
 6. Click `Share incident`.
 7. Open the generated `/i/[shareId]` page.

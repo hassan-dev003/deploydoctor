@@ -3,13 +3,18 @@ import { redactSecrets } from "@/lib/diagnosis/redact";
 import type { DiagnosisResult, EvidenceLine } from "@/lib/diagnosis/schema";
 import { IncidentReportSchema, type IncidentReport } from "./schema";
 
+type GenerateIncidentReportOptions = {
+  sourceType?: IncidentReport["sourceType"];
+};
+
 export function createIncidentId(): string {
   return `inc_${randomBytes(8).toString("hex")}`;
 }
 
 export function generateIncidentReport(
   diagnosis: DiagnosisResult,
-  incidentId = createIncidentId()
+  incidentId = createIncidentId(),
+  options: GenerateIncidentReportOptions = {}
 ): IncidentReport {
   const status = diagnosis.category === "unknown" ? "needs_more_evidence" : "needs_action";
   const evidenceCards = diagnosis.evidenceLines.map((line) =>
@@ -19,7 +24,7 @@ export function generateIncidentReport(
   return IncidentReportSchema.parse({
     incidentId,
     createdAt: new Date().toISOString(),
-    sourceType: "pasted_log",
+    sourceType: options.sourceType ?? "pasted_log",
     status,
     diagnosis,
     investigationSteps: [

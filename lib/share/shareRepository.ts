@@ -6,7 +6,7 @@ import { SavedDiagnosisShareSchema, type SavedDiagnosisShare } from "./shareSche
 
 export class ShareDatabaseUnavailableError extends Error {
   constructor(
-    message = "Sharing is not configured yet. Set POSTGRES_URL or depdoc_POSTGRES_URL to enable saved diagnosis links."
+    message = "Sharing is not configured yet. Set POSTGRES_URL or depdoc_POSTGRES_URL to enable saved report links."
   ) {
     super(message);
     this.name = "ShareDatabaseUnavailableError";

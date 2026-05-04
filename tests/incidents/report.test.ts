@@ -26,6 +26,15 @@ describe("generateIncidentReport", () => {
     expect(incident.status).toBe("needs_more_evidence");
   });
 
+  it("supports sample log source type", () => {
+    const diagnosis = generateMockDiagnosis("Type error: TS2322");
+    const incident = generateIncidentReport(diagnosis, "inc_0123456789abcdef", {
+      sourceType: "sample_log"
+    });
+
+    expect(incident.sourceType).toBe("sample_log");
+  });
+
   it("redacts evidence card quotes", () => {
     const diagnosis = {
       ...generateMockDiagnosis("Error: Missing required environment variable API_KEY"),

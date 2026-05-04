@@ -1,12 +1,15 @@
 import type { IncidentReport } from "./schema";
 
-export async function analyzePastedIncident(rawLog: string): Promise<IncidentReport> {
+export async function analyzePastedIncident(
+  rawLog: string,
+  sourceType: IncidentReport["sourceType"] = "pasted_log"
+): Promise<IncidentReport> {
   const response = await fetch("/api/incidents", {
     method: "POST",
     headers: {
       "Content-Type": "application/json"
     },
-    body: JSON.stringify({ log: rawLog })
+    body: JSON.stringify({ log: rawLog, sourceType })
   });
 
   if (!response.ok) {

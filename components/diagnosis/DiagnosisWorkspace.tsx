@@ -13,6 +13,7 @@ const emptyMessage = "Paste deployment logs before running an incident analysis.
 
 export function DiagnosisWorkspace() {
   const [rawLog, setRawLog] = useState("");
+  const [sourceType, setSourceType] = useState<IncidentReport["sourceType"]>("pasted_log");
   const [incident, setIncident] = useState<IncidentReport | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
@@ -43,13 +44,13 @@ export function DiagnosisWorkspace() {
     setError(null);
 
     try {
-      const result = await analyzePastedIncident(trimmedLog);
+      const result = await analyzePastedIncident(trimmedLog, sourceType);
       setIncident(result);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "DeployDoctor could not analyze this log. Try a shorter excerpt around the first error."
+          : "DeployDoctor could not analyze this incident. Try a shorter excerpt around the first error."
       );
       setIncident(null);
     } finally {
@@ -59,7 +60,7 @@ export function DiagnosisWorkspace() {
 
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
-      <section className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[minmax(0,1fr)_430px]">
+      <section className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)]">
         <div className="space-y-5">
           <header className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-3 py-1 text-sm font-medium text-teal-800 shadow-sm">
@@ -90,6 +91,7 @@ export function DiagnosisWorkspace() {
                     type="button"
                     onClick={() => {
                       setRawLog(sample.log);
+                      setSourceType("sample_log");
                       setError(null);
                       setShareError(null);
                       setShareUrl(null);
@@ -113,6 +115,7 @@ export function DiagnosisWorkspace() {
                 value={rawLog}
                 onChange={(event) => {
                   setRawLog(event.target.value);
+                  setSourceType("pasted_log");
                   setError(null);
                   setShareError(null);
                   setShareUrl(null);
@@ -127,7 +130,7 @@ export function DiagnosisWorkspace() {
                 <p>
                   Privacy note: raw logs stay in React state until you analyze. The server redacts
                   obvious secrets before model calls or evidence display. Sharing saves only sanitized
-                  diagnosis data, never the pasted raw log.
+                  incident report data, never the pasted raw log.
                 </p>
               </div>
 
@@ -146,7 +149,7 @@ export function DiagnosisWorkspace() {
                   className="inline-flex items-center gap-2 rounded-md bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 >
                   <ClipboardPaste className="h-4 w-4" />
-                  {isAnalyzing ? "Analyzing..." : "Analyze pasted log"}
+                  {isAnalyzing ? "Analyzing..." : "Analyze incident"}
                 </button>
                 <button
                   type="button"
@@ -198,7 +201,7 @@ export function DiagnosisWorkspace() {
           </div>
         </div>
 
-        <aside className="lg:pt-28">
+        <aside className="xl:pt-28">
           {incident ? (
             <IncidentReportCard incident={incident} />
           ) : (

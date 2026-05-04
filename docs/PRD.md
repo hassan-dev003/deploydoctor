@@ -1,41 +1,42 @@
 # DeployDoctor PRD
 
 ## One-liner
-DeployDoctor helps developers understand why a Vercel deployment failed and gives clear, actionable fixes.
+DeployDoctor turns failed Vercel deployments into evidence-backed incident reports.
 
 ## Target user
 Indie hackers, students, and frontend developers deploying Next.js/Vercel projects.
 
 ## Problem
-Vercel deployment logs can be noisy. Users often do not know which line matters, what caused the failure, or what exact file/code change to make.
+Vercel deployment logs can be noisy. Users often do not know which line matters, what caused the failure, what evidence supports that conclusion, or what safe command/check to run next.
 
 ## Core flow
-1. User pastes deployment logs or connects/imports a deployment.
+1. User pastes deployment logs.
 2. App analyzes the failure.
-3. App identifies likely root cause.
-4. App explains it in plain English.
-5. App suggests exact fixes.
-6. Optional: generate a patch or checklist.
+3. App returns an incident report with timeline, evidence cards, likely root cause, repair plan, and safe actions.
+4. User can share a sanitized public incident report.
+5. Legacy diagnosis details remain available inside the report.
 
 ## MVP
 - Paste raw Vercel logs.
 - Parse and classify error type.
-- AI-generated diagnosis.
-- Suggested fix steps.
+- AI-generated or mock fallback diagnosis wrapped in an incident report.
+- Evidence-backed repair plan.
 - Example commands.
-- Save/share diagnosis page.
+- Save/share incident report page.
 
 ## Non-goals for MVP
 - No need to access private Vercel logs via link only.
 - No automatic credential-based Vercel integration at first.
 - No auto-pushing fixes to GitHub at first.
+- No GitHub diff inspection or PR generation yet.
+- No analytics.
 
 ## Differentiator
 Not just “show logs.” It explains:
 - the actual failing line,
 - likely root cause,
 - why it failed,
-- how to fix,
+- how to fix safely,
 - confidence level,
 - next diagnostic command.
 

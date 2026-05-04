@@ -73,7 +73,7 @@ describe("POST /api/diagnoses/share", () => {
     const body = (await response.json()) as { error: string };
 
     expect(response.status).toBe(503);
-    expect(body.error).toContain("POSTGRES_URL");
+    expect(body.error).toContain("saved report links");
   });
 });
 
