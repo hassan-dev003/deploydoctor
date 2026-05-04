@@ -1,0 +1,59 @@
+import { ArrowLeft, CalendarClock, Lock } from "lucide-react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { IncidentReportCard } from "@/components/diagnosis/IncidentReportCard";
+import { getIncidentShare } from "@/lib/incidents/shareRepository";
+import { ShareIdSchema } from "@/lib/share/shareSchema";
+
+type SharedIncidentPageProps = {
+  params: Promise<{
+    shareId: string;
+  }>;
+};
+
+export default async function SharedIncidentPage({ params }: SharedIncidentPageProps) {
+  const { shareId } = await params;
+  const parsedShareId = ShareIdSchema.safeParse(shareId);
+
+  if (!parsedShareId.success) {
+    notFound();
+  }
+
+  const share = await getIncidentShare(parsedShareId.data);
+
+  if (!share) {
+    notFound();
+  }
+
+  return (
+    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-4xl space-y-4">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-teal-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          New incident analysis
+        </Link>
+
+        <div className="rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">
+          <div className="mb-2 flex items-center gap-2 font-semibold">
+            <Lock className="h-4 w-4" />
+            Public shared incident report
+          </div>
+          <p>
+            Anyone with this link can view this sanitized incident report. DeployDoctor stores the
+            incident report only, not the pasted raw deployment log.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-sm text-slate-600">
+          <CalendarClock className="h-4 w-4" />
+          Saved {new Date(share.createdAt).toLocaleString()}
+        </div>
+
+        <IncidentReportCard incident={share.incident} />
+      </section>
+    </main>
+  );
+}

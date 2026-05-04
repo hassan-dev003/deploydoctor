@@ -54,6 +54,16 @@ Status: implemented in this repository.
 
 ### Milestone 5: Demo Polish
 
-- [ ] Add more realistic sample logs.
-- [ ] Improve result copy and empty/error states.
-- [ ] Add screenshots or a short demo recording.
+- [x] Add more realistic sample logs.
+- [x] Improve result copy and empty/error states.
+- [x] Add screenshots or a short demo recording.
+
+### Milestone 6: Incident Analyst Layer
+
+- [x] Add `IncidentReport` wrapper around `DiagnosisResult`.
+- [x] Add `POST /api/incidents` while keeping `POST /api/diagnoses`.
+- [x] Upgrade homepage to timeline, evidence cards, repair plan, and safe actions.
+- [x] Add honest current/future capability copy.
+- [x] Add incident sharing at `/api/incidents/share` and `/i/[shareId]`.
+- [x] Preserve legacy diagnosis sharing at `/d/[shareId]`.
+- [x] Add tests for incident schema, API validation, redaction, sharing, and legacy diagnosis API.

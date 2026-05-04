@@ -6,8 +6,8 @@ export type SampleLog = {
 
 export const sampleLogs: SampleLog[] = [
   {
-    label: "Module missing",
-    description: "Clean checkout cannot resolve an imported component.",
+    label: "Case-sensitive import failure",
+    description: "Clean Linux checkout cannot resolve differently cased import path.",
     log: `Vercel CLI 51.6.1
 Installing dependencies...
 Detected Next.js version: 15.5.15
@@ -19,13 +19,18 @@ Running "pnpm build"
 Failed to compile.
 
 ./app/dashboard/page.tsx
-Module not found: Can't resolve '@/components/charts/UsageSparkline'
+Module not found: Can't resolve '@/components/charts/usageSparkline'
+
+Import trace for requested module:
+./app/dashboard/page.tsx
+
+Note: file exists locally as ./components/charts/UsageSparkline.tsx
 
 https://nextjs.org/docs/messages/module-not-found
 Error: Command "pnpm build" exited with 1`
   },
   {
-    label: "Missing env",
+    label: "Missing Production env var",
     description: "Production validation expects an unset variable.",
     log: `Vercel CLI 51.6.1
 Running "pnpm build"
@@ -40,7 +45,7 @@ Tip: add this value in Vercel Project Settings for Production.
 Error: Command "pnpm build" exited with 1`
   },
   {
-    label: "TypeScript",
+    label: "TypeScript build blocker",
     description: "Production typecheck catches an unsafe prop value.",
     log: `Running "pnpm build"
 Creating an optimized production build...
@@ -61,7 +66,7 @@ Type error: Type 'string | undefined' is not assignable to type 'string'.
 Next.js build worker exited with code: 1 and signal: null`
   },
   {
-    label: "Node version",
+    label: "Node runtime mismatch",
     description: "Dependency requires a newer Node runtime.",
     log: `Vercel CLI 51.6.1
 Installing dependencies...
@@ -72,7 +77,7 @@ error next-auth@5.0.0-beta.25: The engine "node" is incompatible with this modul
 Error: Found incompatible module during dependency installation`
   },
   {
-    label: "Lint rule",
+    label: "Lint failure",
     description: "ESLint blocks the deployment before build output is created.",
     log: `Running "pnpm build"
 
@@ -89,7 +94,7 @@ info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/d
 Error: Command "pnpm build" exited with 1`
   },
   {
-    label: "Install fail",
+    label: "Lockfile mismatch",
     description: "Lockfile or dependency conflict prevents install.",
     log: `Installing dependencies...
 pnpm install --frozen-lockfile

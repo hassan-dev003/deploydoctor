@@ -3,17 +3,17 @@
 import { AlertTriangle, Clipboard, ClipboardPaste, Link2, Lock, Share2, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
-import { analyzePastedLog } from "@/lib/diagnosis/diagnosisAdapter";
 import { sampleLogs } from "@/lib/diagnosis/samples";
-import type { DiagnosisResult } from "@/lib/diagnosis/schema";
-import { saveDiagnosisForSharing } from "@/lib/share/shareAdapter";
-import { DiagnosisResultCard } from "./DiagnosisResultCard";
+import { analyzePastedIncident } from "@/lib/incidents/incidentAdapter";
+import { saveIncidentForSharing } from "@/lib/incidents/shareAdapter";
+import type { IncidentReport } from "@/lib/incidents/schema";
+import { IncidentReportCard } from "./IncidentReportCard";
 
-const emptyMessage = "Paste deployment logs before running a diagnosis.";
+const emptyMessage = "Paste deployment logs before running an incident analysis.";
 
 export function DiagnosisWorkspace() {
   const [rawLog, setRawLog] = useState("");
-  const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
+  const [incident, setIncident] = useState<IncidentReport | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,13 +29,13 @@ export function DiagnosisWorkspace() {
   async function handleAnalyze() {
     if (!trimmedLog) {
       setError(emptyMessage);
-      setDiagnosis(null);
+      setIncident(null);
       return;
     }
 
     if (trimmedLog.length > MAX_LOG_CHARS) {
       setError(oversizedLogMessage);
-      setDiagnosis(null);
+      setIncident(null);
       return;
     }
 
@@ -43,15 +43,15 @@ export function DiagnosisWorkspace() {
     setError(null);
 
     try {
-      const result = await analyzePastedLog(trimmedLog);
-      setDiagnosis(result);
+      const result = await analyzePastedIncident(trimmedLog);
+      setIncident(result);
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
           : "DeployDoctor could not analyze this log. Try a shorter excerpt around the first error."
       );
-      setDiagnosis(null);
+      setIncident(null);
     } finally {
       setIsAnalyzing(false);
     }
@@ -64,15 +64,15 @@ export function DiagnosisWorkspace() {
           <header className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-3 py-1 text-sm font-medium text-teal-800 shadow-sm">
               <Sparkles className="h-4 w-4" />
-              AI diagnosis with shareable reports
+              Evidence-backed incident reports
             </div>
             <div className="space-y-2">
               <h1 className="max-w-3xl text-4xl font-semibold tracking-normal text-slate-950 sm:text-5xl">
-                Paste a failed Vercel build log. Get the next fix to try.
+                Turn failed Vercel deployments into evidence-backed incident reports.
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-600">
-                DeployDoctor reads the noisy parts of a deployment log, identifies the likely failure type,
-                and turns it into a practical repair checklist.
+                Paste the relevant build output. DeployDoctor redacts obvious secrets, traces the
+                likely failure, and produces an incident report with evidence, repair steps, and safe actions.
               </p>
             </div>
           </header>
@@ -93,7 +93,7 @@ export function DiagnosisWorkspace() {
                       setError(null);
                       setShareError(null);
                       setShareUrl(null);
-                      setDiagnosis(null);
+                      setIncident(null);
                     }}
                     className="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-800"
                     title={sample.description}
@@ -151,16 +151,16 @@ export function DiagnosisWorkspace() {
                 <button
                   type="button"
                   onClick={handleShare}
-                  disabled={!diagnosis || isSharing}
+                  disabled={!incident || isSharing}
                   className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-teal-300 hover:text-teal-800 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:border-slate-200"
                   title={
-                    diagnosis
-                      ? "Create a DB-backed public link for this sanitized diagnosis."
+                    incident
+                      ? "Create a DB-backed public link for this sanitized incident report."
                       : "Analyze a log before sharing."
                   }
                 >
                   <Share2 className="h-4 w-4" />
-                  {isSharing ? "Creating link..." : "Share diagnosis"}
+                  {isSharing ? "Creating link..." : "Share incident"}
                 </button>
               </div>
 
@@ -175,7 +175,7 @@ export function DiagnosisWorkspace() {
                 <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
                   <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-950">
                     <Link2 className="h-4 w-4 text-teal-700" />
-                    Shareable diagnosis URL
+                    Shareable incident URL
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <input
@@ -199,15 +199,30 @@ export function DiagnosisWorkspace() {
         </div>
 
         <aside className="lg:pt-28">
-          {diagnosis ? (
-            <DiagnosisResultCard diagnosis={diagnosis} />
+          {incident ? (
+            <IncidentReportCard incident={incident} />
           ) : (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-slate-600 shadow-sm">
-              <h2 className="text-lg font-semibold text-slate-950">Diagnosis preview</h2>
+            <div className="space-y-4 rounded-lg border border-dashed border-slate-300 bg-white p-6 text-slate-600 shadow-sm">
+              <h2 className="text-lg font-semibold text-slate-950">Incident report preview</h2>
               <p className="mt-2 text-sm leading-6">
-                Pick a sample above for a fast demo, then analyze it to generate a root cause,
-                evidence, next steps, and a shareable sanitized report.
+                Pick a sample above for a fast demo, then analyze it to generate a timeline,
+                evidence cards, repair plan, safe actions, and a sanitized share link.
               </p>
+              <div className="grid gap-3 text-sm">
+                <div className="rounded-md border border-teal-200 bg-teal-50 p-3 text-teal-900">
+                  <div className="font-semibold">Does</div>
+                  <p className="mt-1 leading-6">
+                    Pasted log analysis, redaction, evidence-backed reports, sanitized sharing.
+                  </p>
+                </div>
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">
+                  <div className="font-semibold">Does not yet</div>
+                  <p className="mt-1 leading-6">
+                    Read private Vercel logs from public URLs, connect Vercel accounts, inspect
+                    GitHub diffs, or auto-push fixes.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </aside>
@@ -216,7 +231,7 @@ export function DiagnosisWorkspace() {
   );
 
   async function handleShare() {
-    if (!diagnosis) {
+    if (!incident) {
       return;
     }
 
@@ -224,14 +239,14 @@ export function DiagnosisWorkspace() {
     setShareError(null);
 
     try {
-      const saved = await saveDiagnosisForSharing(diagnosis);
+      const saved = await saveIncidentForSharing(incident);
       setShareUrl(saved.url);
     } catch (caughtError) {
       setShareUrl(null);
       setShareError(
         caughtError instanceof Error
           ? caughtError.message
-          : "DeployDoctor could not create a share link."
+          : "DeployDoctor could not create an incident link."
       );
     } finally {
       setIsSharing(false);
