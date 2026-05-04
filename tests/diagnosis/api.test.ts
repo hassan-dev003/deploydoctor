@@ -4,6 +4,7 @@ import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
 import { generateOpenAIDiagnosis } from "@/lib/diagnosis/generateOpenAIDiagnosis";
 import { generateServerDiagnosis } from "@/lib/diagnosis/generateServerDiagnosis";
 import { generateMockDiagnosis } from "@/lib/diagnosis/generateMockDiagnosis";
+import { DiagnosisResultSchema } from "@/lib/diagnosis/schema";
 
 describe("POST /api/diagnoses", () => {
   it("rejects empty logs", async () => {
@@ -70,16 +71,21 @@ Error: Missing required environment variable STRIPE_SECRET_KEY`,
 });
 
 describe("generateOpenAIDiagnosis", () => {
-  it("returns openai output when structured model output validates", async () => {
+  it("adds server-owned analyzedAt to valid OpenAI output", async () => {
     const mockDiagnosis = {
       ...generateMockDiagnosis("Module not found: Can't resolve './x'"),
       generatedBy: "openai" as const
     };
+    const modelOutput = { ...mockDiagnosis } as Partial<typeof mockDiagnosis>;
+
+    delete modelOutput.analyzedAt;
+
+    const create = vi.fn(async () => ({
+      output_parsed: modelOutput
+    }));
     const client = {
       responses: {
-        create: vi.fn(async () => ({
-          output_parsed: mockDiagnosis
-        }))
+        create
       }
     };
 
@@ -90,7 +96,24 @@ describe("generateOpenAIDiagnosis", () => {
     });
 
     expect(result.generatedBy).toBe("openai");
-    expect(client.responses.create).toHaveBeenCalledOnce();
+    expect(DiagnosisResultSchema.parse(result).analyzedAt).toBe(result.analyzedAt);
+    expect(new Date(result.analyzedAt).toISOString()).toBe(result.analyzedAt);
+    expect(create).toHaveBeenCalledOnce();
+
+    const request = create.mock.calls[0]?.[0] as {
+      text?: {
+        format?: {
+          schema?: {
+            properties?: Record<string, unknown>;
+            required?: string[];
+          };
+        };
+      };
+    };
+    const schema = request.text?.format?.schema;
+
+    expect(schema?.properties).not.toHaveProperty("analyzedAt");
+    expect(schema?.required).not.toContain("analyzedAt");
   });
 });
 
