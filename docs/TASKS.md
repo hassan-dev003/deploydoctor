@@ -67,3 +67,15 @@ Status: implemented in this repository.
 - [x] Add incident sharing at `/api/incidents/share` and `/i/[shareId]`.
 - [x] Preserve legacy diagnosis sharing at `/d/[shareId]`.
 - [x] Add tests for incident schema, API validation, redaction, sharing, and legacy diagnosis API.
+
+### Milestone 7A: Connected Vercel Ingestion Foundation
+
+- [x] Add homepage Connected Vercel mode section with honest not-connected status.
+- [x] Add Vercel connection metadata schema/repository.
+- [x] Add `POST /api/webhooks/vercel` for deployment failure webhook metadata.
+- [x] Add `vercel_webhook` incident source type.
+- [x] Add internal `/incidents` inbox for stored webhook incidents.
+- [x] Add incident storage separate from share links.
+- [x] Add tests for webhook validation, storage, sanitization, and existing paste API coverage.
+- [ ] Future: Vercel OAuth/integration install.
+- [ ] Future: token encryption, refresh, and automatic log fetching.

@@ -35,6 +35,15 @@ describe("generateIncidentReport", () => {
     expect(incident.sourceType).toBe("sample_log");
   });
 
+  it("supports Vercel webhook source type", () => {
+    const diagnosis = generateMockDiagnosis("Deployment stopped unexpectedly");
+    const incident = generateIncidentReport(diagnosis, "inc_0123456789abcdef", {
+      sourceType: "vercel_webhook"
+    });
+
+    expect(incident.sourceType).toBe("vercel_webhook");
+  });
+
   it("redacts evidence card quotes", () => {
     const diagnosis = {
       ...generateMockDiagnosis("Error: Missing required environment variable API_KEY"),

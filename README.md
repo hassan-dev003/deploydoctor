@@ -2,7 +2,7 @@
 
 DeployDoctor helps developers turn failed Vercel deployments into evidence-backed incident reports.
 
-This repository is currently at **Milestone 6**: a paste-first incident analyst for Vercel and Next.js deployment failures. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. The MVP input is pasted logs only.
+This repository is currently at **Milestone 7A**: a paste-first incident analyst with a safe Vercel webhook ingestion foundation. The main app still analyzes pasted logs; webhook ingestion can store metadata-only placeholder incidents for failed deployments. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails.
 
 ## Local Setup
 
@@ -106,11 +106,28 @@ https://deploydoctor.vercel.app
 
 See `docs/DEMO.md` for a 60-90 second hackathon video checklist.
 
+## Connected Vercel Foundation
+
+Milestone 7A adds the first connected-mode foundation:
+
+- `POST /api/webhooks/vercel` accepts Vercel deployment webhook-shaped JSON.
+- `deployment.error` and legacy `deployment-error` events create metadata-only placeholder incidents.
+- `/incidents` lists stored webhook-created incidents when Postgres is configured.
+- `vercel_connections` stores connection metadata for future integration install work.
+
+Not implemented yet:
+
+- Vercel OAuth or marketplace integration install.
+- Token encryption, token refresh, or automatic log fetching.
+- Reading private deployment logs from public deployment URLs.
+- GitHub diff inspection, MCP, or auto-fixes.
+
 ## Current Scope
 
 - Paste raw Vercel logs into the homepage incident analyst.
 - Keep raw logs only in React state.
 - Send logs to `POST /api/incidents` for incident reports; keep `POST /api/diagnoses` for legacy diagnosis clients.
+- Receive Vercel deployment failure webhook metadata at `POST /api/webhooks/vercel`.
 - Redact obvious secrets before model calls or evidence display.
 - Return the stable `DiagnosisResult` shape from Cerebras or mock fallback.
 - Wrap diagnoses in `IncidentReport` output with investigation steps, evidence cards, repair plans, and safe actions.
@@ -124,6 +141,7 @@ See `docs/DEMO.md` for a 60-90 second hackathon video checklist.
 - Dashboard or saved-report editing.
 - Reading private Vercel logs from public deployment URLs.
 - Vercel account connection or OAuth.
+- Token refresh or automatic Vercel log fetching.
 - GitHub diff inspection or PR generation.
 - Auto-pushing fixes.
 - Analytics.
