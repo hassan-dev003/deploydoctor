@@ -89,12 +89,12 @@ export function DiagnosisWorkspace() {
                     key={sample.label}
                     type="button"
                     onClick={() => {
-                  setRawLog(sample.log);
-                  setError(null);
-                  setShareError(null);
-                  setShareUrl(null);
-                  setDiagnosis(null);
-                }}
+                      setRawLog(sample.log);
+                      setError(null);
+                      setShareError(null);
+                      setShareUrl(null);
+                      setDiagnosis(null);
+                    }}
                     className="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-800"
                     title={sample.description}
                   >
@@ -205,9 +205,8 @@ export function DiagnosisWorkspace() {
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-slate-600 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">Diagnosis preview</h2>
               <p className="mt-2 text-sm leading-6">
-                Choose a sample log or paste your own failed deployment output. The API returns the
-                same structured result whether the AI model succeeds or DeployDoctor falls back to the mock
-                diagnosis path.
+                Pick a sample above for a fast demo, then analyze it to generate a root cause,
+                evidence, next steps, and a shareable sanitized report.
               </p>
             </div>
           )}

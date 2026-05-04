@@ -15,15 +15,15 @@ type DiagnosisTemplate = {
 const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
   module_not_found: {
     title: "Import or package resolution failed",
-    summary: "The deployment could not resolve a module that the build expected to import.",
+    summary: "Vercel built from a clean checkout and could not find one of the imported modules.",
     rootCause:
-      "A dependency, local file path, or path alias referenced by the app is missing or named differently in the deployed environment.",
+      "An import points to a file, package, or path alias that is missing, uncommitted, or named with different casing than the deployed filesystem expects.",
     reasoning:
-      "DeployDoctor found resolver language such as module-not-found or cannot-resolve in the build output. Vercel builds from a clean checkout, so undeclared packages and case-sensitive path mismatches surface here.",
+      "The log contains module resolution language such as module-not-found or cannot-resolve. These failures often appear only in deployment because Vercel does not reuse local files outside the committed repo.",
     fixSteps: [
-      "Confirm the imported file exists with the exact same casing as the import statement.",
-      "If it is an npm package, add it to dependencies rather than devDependencies when used at build/runtime.",
-      "Check path aliases in tsconfig.json and make sure they match the folder structure."
+      "Open the file named in the error and copy the exact import path.",
+      "Confirm the target file or package exists with identical casing in the committed repo.",
+      "If it is a package, install it and commit the updated manifest and lockfile."
     ],
     filesToCheck: ["package.json", "tsconfig.json", "the file named in the failing import"],
     commands: ["pnpm install", "pnpm build", "pnpm why <package-name>"],
@@ -31,14 +31,14 @@ const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
   },
   typescript_error: {
     title: "TypeScript blocked the production build",
-    summary: "The app compiled far enough to run type checks, then failed on a TypeScript error.",
+    summary: "The app compiled, then the production typecheck stopped on a type mismatch.",
     rootCause:
-      "A value, prop, return type, or imported type does not match what the compiler expects.",
+      "A value, prop, return type, or imported type does not satisfy the TypeScript contract used during the build.",
     reasoning:
-      "DeployDoctor found TypeScript compiler markers such as TS error codes, assignability failures, or missing properties. Next.js treats these as build-blocking by default.",
+      "The log includes TypeScript markers such as Type error, TS error codes, assignability failures, or missing properties. Next.js treats these as deployment-blocking by default.",
     fixSteps: [
       "Open the file and line referenced by the compiler output.",
-      "Fix the type mismatch rather than suppressing it unless the demo timeline requires a temporary unblock.",
+      "Fix the type mismatch at the source instead of hiding it with a broad cast.",
       "Run the local typecheck command before redeploying."
     ],
     filesToCheck: ["the TypeScript file in the error", "tsconfig.json", "component prop types"],
@@ -47,15 +47,15 @@ const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
   },
   lint_error: {
     title: "Linting failed during the build",
-    summary: "The deployment stopped because lint rules reported build-blocking issues.",
+    summary: "The deployment stopped because ESLint reported build-blocking issues.",
     rootCause:
-      "The project has an ESLint violation that Next.js or the configured build script treats as fatal.",
+      "A lint rule failed in a file that is part of the deployed app, and the configured build treats lint errors as fatal.",
     reasoning:
-      "DeployDoctor found ESLint rule names or lint-failed language in the log. These often pass unnoticed until CI or Vercel runs the production checks.",
+      "The log includes ESLint rule names or lint-failed language. These often surface in Vercel when the production command runs stricter checks than a local dev server.",
     fixSteps: [
       "Run lint locally and inspect the first reported file.",
       "Fix the rule violation directly when possible.",
-      "Only relax a lint rule if the rule is not useful for this project."
+      "Only relax a lint rule if the rule is intentionally not useful for this project."
     ],
     filesToCheck: ["the linted file in the error", ".eslintrc.json or eslint.config.*", "next.config.*"],
     commands: ["pnpm lint", "pnpm build"],
@@ -63,14 +63,14 @@ const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
   },
   missing_env_var: {
     title: "Required environment variable is missing",
-    summary: "The build or runtime validation expected an environment variable that Vercel did not provide.",
+    summary: "The app expected a required environment variable that was not available in the Vercel environment.",
     rootCause:
-      "A required secret or config value exists locally but has not been added to the Vercel project environment.",
+      "A required secret or config value likely exists locally but has not been added to the matching Vercel environment.",
     reasoning:
-      "DeployDoctor found environment-variable language in the failure. Local .env files are not automatically available in Vercel deployments.",
+      "The log contains missing-env or process.env language. Local .env files are not automatically available to Vercel preview or production deployments.",
     fixSteps: [
       "Identify the exact variable name from the error or validation schema.",
-      "Add the variable in Vercel Project Settings for the correct environment.",
+      "Add the variable in Vercel Project Settings for the exact environment that failed.",
       "Redeploy after confirming preview and production values are set as needed."
     ],
     filesToCheck: [".env.example", "environment validation file", "Vercel Project Settings"],
@@ -79,15 +79,15 @@ const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
   },
   dependency_install_error: {
     title: "Dependency installation failed",
-    summary: "The deployment failed before or during dependency installation.",
+    summary: "The deployment failed while Vercel was installing packages from the committed manifests.",
     rootCause:
-      "The lockfile, package manager, package versions, or peer dependencies are inconsistent with the deploy environment.",
+      "The lockfile, package manager, package versions, or peer dependencies are inconsistent with the clean deploy environment.",
     reasoning:
-      "DeployDoctor found package-manager errors such as ERESOLVE, lockfile failures, or peer dependency conflicts. Vercel must reproduce installs from the committed manifest and lockfile.",
+      "The log contains package-manager errors such as frozen-lockfile failures, ERESOLVE, or peer dependency conflicts. Vercel must reproduce installs from committed files only.",
     fixSteps: [
       "Run a clean local install with the same package manager used by the repo.",
       "Commit the updated lockfile if dependency versions changed.",
-      "Resolve peer dependency conflicts instead of relying on an uncommitted local node_modules folder."
+      "Resolve dependency conflicts instead of relying on an uncommitted local node_modules folder."
     ],
     filesToCheck: ["package.json", "pnpm-lock.yaml or package-lock.json", ".npmrc"],
     commands: ["pnpm install", "pnpm install --frozen-lockfile", "pnpm build"],
@@ -97,9 +97,9 @@ const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
     title: "Build command exited unsuccessfully",
     summary: "The configured build command returned a non-zero exit code.",
     rootCause:
-      "The build script failed, but the underlying cause is likely a more specific error slightly earlier in the log.",
+      "The build script failed, but the actionable cause is likely a more specific error slightly earlier in the log.",
     reasoning:
-      "DeployDoctor found command-failed or exited-with-code language. This line is usually the wrapper failure, so inspect the lines above it for the first actionable error.",
+      "The log includes command-failed or exited-with-code language. This line is usually the wrapper failure, so the most useful clue is often a few lines above it.",
     fixSteps: [
       "Scroll earlier in the log and locate the first error before the command exit line.",
       "Run the same build command locally from a clean checkout.",
@@ -111,11 +111,11 @@ const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
   },
   node_version_error: {
     title: "Node.js version mismatch",
-    summary: "The deployment is using a Node.js version that does not satisfy the project or a dependency.",
+    summary: "The deployment is using a Node.js version that does not satisfy the app or one of its dependencies.",
     rootCause:
-      "The project engines field, Vercel Node setting, or dependency requirement conflicts with the deploy runtime.",
+      "The project engines field, Vercel Node setting, or dependency requirement conflicts with the runtime used during install or build.",
     reasoning:
-      "DeployDoctor found unsupported-engine or Node-version language. Package managers enforce these constraints more strictly in clean deploys.",
+      "The log contains unsupported-engine or Node-version language. Package managers enforce these constraints during Vercel's clean install step.",
     fixSteps: [
       "Check the required Node version in the error and align local and Vercel settings.",
       "Set the engines.node field when the app requires a specific version.",
@@ -127,11 +127,11 @@ const templates: Record<DiagnosisCategory, DiagnosisTemplate> = {
   },
   unknown: {
     title: "Deployment failure needs closer inspection",
-    summary: "DeployDoctor could not confidently match the log to a known failure pattern yet.",
+    summary: "DeployDoctor could not confidently match the pasted excerpt to a known failure pattern yet.",
     rootCause:
-      "The pasted log does not include enough recognizable error context, or the first actionable error is outside the pasted excerpt.",
+      "The pasted log may not include enough context, or the first actionable error may be above or below the excerpt.",
     reasoning:
-      "DeployDoctor did not find strong markers for module resolution, TypeScript, linting, env vars, dependency install, build command, or Node version failures.",
+      "The excerpt does not include strong markers for module resolution, TypeScript, linting, env vars, dependency install, build command, or Node version failures.",
     fixSteps: [
       "Paste more lines from immediately before the final failure message.",
       "Look for the first line that contains Error, Failed, Cannot, or Exit code.",

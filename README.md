@@ -90,6 +90,22 @@ pnpm build
 
 Creates a production Next.js build.
 
+## Demo Walkthrough
+
+Use the production app or local dev server:
+
+```bash
+https://deploydoctor.vercel.app
+```
+
+1. Choose a sample log such as `Missing env`, `TypeScript`, or `Install fail`.
+2. Click `Analyze pasted log` and point out the category, `generatedBy`, confidence, evidence, repair checklist, files/settings, and first command to run.
+3. Click `Share diagnosis` and open the generated `/d/[shareId]` page.
+4. Explain that the shared page stores only sanitized diagnosis JSON, not the pasted raw log.
+5. For a fallback demo, run without `CEREBRAS_API_KEY` locally and repeat the same flow; the UI shape stays the same with `generatedBy: mock`.
+
+See `docs/DEMO.md` for a 60-90 second hackathon video checklist.
+
 ## Current Scope
 
 - Paste raw Vercel logs into the homepage tool.
