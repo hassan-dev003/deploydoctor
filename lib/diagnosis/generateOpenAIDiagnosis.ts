@@ -70,9 +70,6 @@ const diagnosisJsonSchema = {
     generatedBy: {
       type: "string",
       enum: ["openai"]
-    },
-    analyzedAt: {
-      type: "string"
     }
   },
   required: [
@@ -87,8 +84,7 @@ const diagnosisJsonSchema = {
     "filesToCheck",
     "commands",
     "nextDiagnosticCommand",
-    "generatedBy",
-    "analyzedAt"
+    "generatedBy"
   ]
 };
 
@@ -140,8 +136,7 @@ export async function generateOpenAIDiagnosis({
   return DiagnosisResultSchema.parse({
     ...parsed,
     generatedBy: "openai",
-    analyzedAt:
-      typeof parsed.analyzedAt === "string" ? parsed.analyzedAt : new Date().toISOString()
+    analyzedAt: new Date().toISOString()
   });
 }
 

@@ -2,7 +2,7 @@
 
 DeployDoctor helps developers understand why a Vercel deployment failed and what to try next.
 
-This repository is currently at **Milestone 2**: a Next.js App Router demo with server-side diagnosis. The app calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. There is no database, auth, or share-page persistence yet. The MVP input is pasted logs only.
+This repository is currently at **Milestone 3**: a Next.js App Router demo with server-side diagnosis and DB-backed public share pages. The app calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. The MVP input is pasted logs only.
 
 ## Local Setup
 
@@ -23,6 +23,14 @@ OPENAI_MODEL=gpt-5-mini
 ```
 
 `OPENAI_MODEL` is optional and defaults to `gpt-5-mini`.
+
+To enable saved share links, add:
+
+```bash
+POSTGRES_URL=your_vercel_postgres_or_neon_connection_string
+```
+
+Diagnosis still works without `POSTGRES_URL`; only saving/share links return a friendly configuration error.
 
 ## Available Commands
 
@@ -64,11 +72,11 @@ Creates a production Next.js build.
 - Redact obvious secrets before model calls or evidence display.
 - Return the stable `DiagnosisResult` shape from OpenAI or mock fallback.
 - Show a structured diagnosis with root cause, evidence, next steps, files to check, and commands to try.
-- Keep a disabled share affordance for future DB-backed share pages.
+- Save sanitized diagnosis results to Postgres and share them at `/d/[shareId]`.
+- Store only sanitized diagnosis data, never the pasted raw log.
 
 ## Not Implemented Yet
 
 - Vercel deployment import.
-- Database persistence.
-- Share pages.
 - Auth.
+- Dashboard or saved-diagnosis editing.

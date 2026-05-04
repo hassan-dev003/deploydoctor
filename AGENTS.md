@@ -7,11 +7,14 @@ DeployDoctor is a Next.js App Router project using TypeScript, Tailwind CSS, Zod
 - `app/`: routes, layout, global styles, and the tool-first homepage.
 - `components/diagnosis/`: UI components for the pasted-log workflow and diagnosis result card.
 - `app/api/diagnoses/route.ts`: server diagnosis endpoint.
+- `app/api/diagnoses/share/route.ts`: saves sanitized diagnosis results for public links.
+- `app/d/[shareId]/page.tsx`: public shared diagnosis page.
 - `lib/diagnosis/`: shared diagnosis contract, redaction, classifier, OpenAI generator, mock fallback, samples, and adapter seam.
+- `lib/share/`: share request schemas, DB repository, recursive redaction before save, and client adapter.
 - `tests/diagnosis/`: Vitest coverage for redaction and classification.
 - `docs/`: product notes, task tracking, and future technical planning.
 
-Keep raw pasted logs out of persistence. The UI keeps logs in React state, and the server redacts before OpenAI calls or evidence display.
+Keep raw pasted logs out of persistence. The UI keeps logs in React state, the server redacts before OpenAI calls, and sharing stores only sanitized `DiagnosisResult` JSON plus metadata.
 
 ## Build, Test, and Development Commands
 
@@ -21,6 +24,8 @@ Keep raw pasted logs out of persistence. The UI keeps logs in React state, and t
 - `pnpm test`: run Vitest tests.
 - `pnpm lint`: run ESLint with Next.js rules.
 - `pnpm typecheck`: run TypeScript checks without emitting files.
+
+Sharing requires `POSTGRES_URL`. Diagnosis must continue to work when that env var is absent.
 
 ## Coding Style & Naming Conventions
 
@@ -51,4 +56,4 @@ Pull requests should include a summary, test results, and screenshots for visibl
 
 ## Future Architecture Notes
 
-`DiagnosisResult` is the stable contract for UI, API routes, OpenAI output, mock fallback, and future DB persistence. Milestone 3 should add DB-backed saved/share pages without storing raw logs.
+`DiagnosisResult` is the stable contract for UI, API routes, OpenAI output, mock fallback, and DB-backed share pages. Share IDs must be unguessable and public links must never expose pasted raw logs.

@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 2 is a Next.js App Router app with server-side diagnosis. It calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. It does not store logs, connect to a database, or create share pages.
+Milestone 3 is a Next.js App Router app with server-side diagnosis and DB-backed public share pages. Diagnosis calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. Sharing requires `POSTGRES_URL`; diagnosis still works without it.
 
 ## Diagnosis Contract
 
@@ -26,6 +26,19 @@ Milestone 2 is a Next.js App Router app with server-side diagnosis. It calls Ope
 7. OpenAI Structured Outputs returns `DiagnosisResult`, or the server falls back to `generateMockDiagnosis`.
 8. UI renders the structured diagnosis result.
 
+## Share Flow
+
+1. User clicks Share diagnosis after analysis.
+2. UI posts `{ diagnosis }` to `POST /api/diagnoses/share`.
+3. The route uses a strict request schema and rejects top-level extras such as raw logs.
+4. Server recursively redacts every string field in the diagnosis.
+5. Server lazily ensures the `diagnosis_shares` table exists at request time.
+6. Server stores metadata plus sanitized `DiagnosisResult` JSON.
+7. UI receives `/d/[shareId]` and shows a copyable link.
+8. Public page loads the saved diagnosis and renders `DiagnosisResultCard`.
+
+The DB stores `shareId`, `createdAt`, `category`, `generatedBy`, `title`, `summary`, and `diagnosis_json`. It does not store raw logs, pasted input, prompts, or analytics.
+
 ## Future Seams
 
-- Milestone 3: persist sanitized diagnosis data for share pages. Do not store raw logs.
+- Deployment polish should configure `POSTGRES_URL`, `OPENAI_API_KEY`, and `OPENAI_MODEL` in Vercel.

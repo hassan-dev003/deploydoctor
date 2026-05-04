@@ -1,11 +1,12 @@
 "use client";
 
-import { AlertTriangle, ClipboardPaste, Lock, Share2, Sparkles } from "lucide-react";
+import { AlertTriangle, Clipboard, ClipboardPaste, Link2, Lock, Share2, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
 import { analyzePastedLog } from "@/lib/diagnosis/diagnosisAdapter";
 import { sampleLogs } from "@/lib/diagnosis/samples";
 import type { DiagnosisResult } from "@/lib/diagnosis/schema";
+import { saveDiagnosisForSharing } from "@/lib/share/shareAdapter";
 import { DiagnosisResultCard } from "./DiagnosisResultCard";
 
 const emptyMessage = "Paste deployment logs before running a diagnosis.";
@@ -14,7 +15,10 @@ export function DiagnosisWorkspace() {
   const [rawLog, setRawLog] = useState("");
   const [diagnosis, setDiagnosis] = useState<DiagnosisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   const trimmedLog = rawLog.trim();
   const lineCount = useMemo(
@@ -85,10 +89,12 @@ export function DiagnosisWorkspace() {
                     key={sample.label}
                     type="button"
                     onClick={() => {
-                      setRawLog(sample.log);
-                      setError(null);
-                      setDiagnosis(null);
-                    }}
+                  setRawLog(sample.log);
+                  setError(null);
+                  setShareError(null);
+                  setShareUrl(null);
+                  setDiagnosis(null);
+                }}
                     className="rounded-md border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition hover:border-teal-300 hover:text-teal-800"
                     title={sample.description}
                   >
@@ -108,6 +114,8 @@ export function DiagnosisWorkspace() {
                 onChange={(event) => {
                   setRawLog(event.target.value);
                   setError(null);
+                  setShareError(null);
+                  setShareUrl(null);
                 }}
                 spellCheck={false}
                 placeholder="Paste the failed Vercel deployment log here..."
@@ -118,8 +126,8 @@ export function DiagnosisWorkspace() {
                 <Lock className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
                   Privacy note: raw logs stay in React state until you analyze. The server redacts
-                  obvious secrets before model calls or evidence display. Nothing is saved, shared,
-                  or placed in the URL.
+                  obvious secrets before model calls or evidence display. Sharing saves only sanitized
+                  diagnosis data, never the pasted raw log.
                 </p>
               </div>
 
@@ -142,14 +150,50 @@ export function DiagnosisWorkspace() {
                 </button>
                 <button
                   type="button"
-                  disabled
-                  className="inline-flex cursor-not-allowed items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-400"
-                  title="DB-backed share pages arrive in Milestone 3."
+                  onClick={handleShare}
+                  disabled={!diagnosis || isSharing}
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-teal-300 hover:text-teal-800 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:border-slate-200"
+                  title={
+                    diagnosis
+                      ? "Create a DB-backed public link for this sanitized diagnosis."
+                      : "Analyze a log before sharing."
+                  }
                 >
                   <Share2 className="h-4 w-4" />
-                  Share diagnosis later
+                  {isSharing ? "Creating link..." : "Share diagnosis"}
                 </button>
               </div>
+
+              {shareError ? (
+                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>{shareError}</p>
+                </div>
+              ) : null}
+
+              {shareUrl ? (
+                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-950">
+                    <Link2 className="h-4 w-4 text-teal-700" />
+                    Shareable diagnosis URL
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <input
+                      readOnly
+                      value={shareUrl}
+                      className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => void navigator.clipboard?.writeText(shareUrl)}
+                      className="inline-flex items-center justify-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-teal-300 hover:text-teal-800"
+                    >
+                      <Clipboard className="h-4 w-4" />
+                      Copy
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -171,4 +215,27 @@ export function DiagnosisWorkspace() {
       </section>
     </main>
   );
+
+  async function handleShare() {
+    if (!diagnosis) {
+      return;
+    }
+
+    setIsSharing(true);
+    setShareError(null);
+
+    try {
+      const saved = await saveDiagnosisForSharing(diagnosis);
+      setShareUrl(saved.url);
+    } catch (caughtError) {
+      setShareUrl(null);
+      setShareError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "DeployDoctor could not create a share link."
+      );
+    } finally {
+      setIsSharing(false);
+    }
+  }
 }

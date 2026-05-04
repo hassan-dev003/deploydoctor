@@ -33,10 +33,16 @@ Status: implemented in this repository.
 
 ### Milestone 3: DB-Backed Saved/Share Pages
 
-- [ ] Add database schema for saved diagnoses.
-- [ ] Save sanitized diagnosis data, not raw logs.
-- [ ] Add public unguessable share pages.
-- [ ] Enable the current disabled share affordance.
+Status: implemented in this repository.
+
+- [x] Add database schema for saved diagnoses.
+- [x] Save sanitized diagnosis data, not raw logs.
+- [x] Add public unguessable share pages.
+- [x] Enable the current disabled share affordance.
+- [x] Add strict save endpoint validation.
+- [x] Recursively redact diagnosis strings before DB writes.
+- [x] Keep diagnosis working without `POSTGRES_URL`.
+- [x] Add tests for validation, redaction, payload shape, and read validation.
 
 ### Milestone 4: Deployment On Vercel
 
