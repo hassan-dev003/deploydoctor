@@ -103,6 +103,71 @@ export async function listStoredIncidents(
   return result.rows.map((row) => storedIncidentFromRow(row));
 }
 
+export async function getStoredIncident(
+  incidentId: string,
+  executor: SqlExecutor = getIncidentStorageSqlExecutor()
+): Promise<StoredIncident | null> {
+  await ensureIncidentStorageSchema(executor);
+
+  const result = await executor`
+    select
+      incident_id,
+      created_at,
+      source_type,
+      status,
+      project_id,
+      deployment_id,
+      deployment_url,
+      title,
+      summary,
+      incident_json,
+      raw_payload_json
+    from incidents
+    where incident_id = ${incidentId}
+    limit 1
+  `;
+
+  return result.rows[0] ? storedIncidentFromRow(result.rows[0]) : null;
+}
+
+export async function updateStoredIncidentAnalysis(
+  input: {
+    incidentId: string;
+    status: StoredIncident["status"];
+    title: string;
+    summary: string;
+    incident: IncidentReport | null;
+  },
+  executor: SqlExecutor = getIncidentStorageSqlExecutor()
+): Promise<StoredIncident> {
+  await ensureIncidentStorageSchema(executor);
+
+  const incidentJson = input.incident ? IncidentReportSchema.parse(input.incident) : null;
+  const result = await executor`
+    update incidents
+    set
+      status = ${input.status},
+      title = ${input.title},
+      summary = ${input.summary},
+      incident_json = ${incidentJson ? JSON.stringify(incidentJson) : null}::jsonb
+    where incident_id = ${input.incidentId}
+    returning
+      incident_id,
+      created_at,
+      source_type,
+      status,
+      project_id,
+      deployment_id,
+      deployment_url,
+      title,
+      summary,
+      incident_json,
+      raw_payload_json
+  `;
+
+  return storedIncidentFromRow(result.rows[0]);
+}
+
 export async function ensureIncidentStorageSchema(
   executor: SqlExecutor = getIncidentStorageSqlExecutor()
 ): Promise<void> {

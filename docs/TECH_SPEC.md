@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 7A is a paste-first Vercel deployment incident analyst with a webhook ingestion foundation. Milestone 6 added `IncidentReport` for pasted logs; Milestone 7A adds metadata-only Vercel deployment failure webhook storage. Diagnosis calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. Sharing and the webhook inbox require `POSTGRES_URL` or `depdoc_POSTGRES_URL`; paste analysis still works without either variable.
+Milestone 7B is a paste-first Vercel deployment incident analyst with a Vercel authorization and authenticated log-fetching foundation. Milestone 6 added `IncidentReport` for pasted logs; Milestone 7A added metadata-only Vercel deployment failure webhook storage; Milestone 7B adds OAuth token storage, webhook signature verification, and authorized deployment-event fetching. Diagnosis calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. Sharing and the webhook inbox require `POSTGRES_URL` or `depdoc_POSTGRES_URL`; paste analysis still works without either variable.
 
 ## Diagnosis Contract
 
@@ -29,15 +29,28 @@ Milestone 7A is a paste-first Vercel deployment incident analyst with a webhook 
 
 `sourceType` is `pasted_log` for manually entered logs, `sample_log` when the homepage sample buttons populate the textarea, and `vercel_webhook` for metadata-only webhook-created incidents. `POST /api/diagnoses` remains available for legacy clients and still returns `DiagnosisResult`.
 
-## Vercel Webhook Foundation
+## Vercel Connected Foundation
 
-1. Vercel sends webhook-shaped JSON to `POST /api/webhooks/vercel`.
-2. The route validates the base webhook shape: `type`, `id`, `createdAt`, optional `region`, and `payload`.
-3. `deployment.error` and legacy `deployment-error` create placeholder stored incidents.
-4. Unrelated events return `202` with `ignored` status.
-5. Stored webhook incidents use `sourceType: vercel_webhook` and contain sanitized webhook metadata only.
+1. User starts Vercel authorization at `GET /api/vercel/oauth/start`.
+2. The route creates signed state, nonce, and PKCE verifier data in an httpOnly cookie.
+3. Vercel redirects to `GET /api/vercel/oauth/callback`.
+4. The callback validates state, exchanges the code for tokens, encrypts tokens with `TOKEN_ENCRYPTION_KEY`, and upserts `vercel_connections`.
+5. Vercel sends webhook-shaped JSON to `POST /api/webhooks/vercel`.
+6. The route reads the raw body and verifies `x-vercel-signature` when `VERCEL_WEBHOOK_SECRET` is configured.
+7. `deployment.error` and legacy `deployment-error` create stored incidents.
+8. If a matching connected token exists, DeployDoctor fetches Vercel deployment events, sanitizes event text, generates `IncidentReport`, and updates the stored incident.
+9. If no connection exists, the incident remains metadata-only and says authorization is required.
+10. Unrelated events return `202` with `ignored` status.
 
-`vercel_connections` stores future connection metadata, including nullable encrypted-token columns for later OAuth work. Milestone 7A does not implement OAuth, token encryption, token refresh, webhook signature verification, or automatic log fetching.
+`vercel_connections` stores encrypted OAuth tokens only. Plaintext access and refresh tokens must never be written to the database or returned to the client. Fetched deployment logs are not stored directly; only sanitized evidence inside `IncidentReport` may be persisted.
+
+Required connected-mode environment variables:
+
+- `VERCEL_CLIENT_ID`
+- `VERCEL_CLIENT_SECRET`
+- `VERCEL_REDIRECT_URI`
+- `TOKEN_ENCRYPTION_KEY`
+- `VERCEL_WEBHOOK_SECRET`
 
 ## Share Flow
 
@@ -55,8 +68,9 @@ Legacy diagnosis sharing still uses `POST /api/diagnoses/share`, `diagnosis_shar
 ## Explicit Non-Claims
 
 - DeployDoctor does not read private Vercel logs from public deployment URLs.
-- DeployDoctor does not connect Vercel accounts yet.
-- DeployDoctor does not refresh tokens or fetch private logs automatically yet.
+- DeployDoctor fetches private Vercel deployment events only after OAuth authorization.
+- DeployDoctor does not refresh tokens yet.
+- DeployDoctor does not provide full marketplace polish yet.
 - DeployDoctor does not inspect GitHub diffs or open PRs.
 - DeployDoctor does not auto-push fixes.
 
@@ -65,5 +79,5 @@ Legacy diagnosis sharing still uses `POST /api/diagnoses/share`, `diagnosis_shar
 1. Vercel installs dependencies with pnpm.
 2. `vercel.json` runs `pnpm test && pnpm lint && pnpm typecheck && pnpm build`.
 3. The deployment fails if tests, lint, typecheck, or the production Next.js build fail.
-4. Production should define `CEREBRAS_API_KEY`, optional `CEREBRAS_MODEL`, and either `POSTGRES_URL` or `depdoc_POSTGRES_URL`.
+4. Production should define `CEREBRAS_API_KEY`, optional `CEREBRAS_MODEL`, either `POSTGRES_URL` or `depdoc_POSTGRES_URL`, and connected-mode vars when OAuth/webhooks are enabled.
 5. The production deployment is aliased at `https://deploydoctor.vercel.app`.

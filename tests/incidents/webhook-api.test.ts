@@ -1,28 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/webhooks/vercel/route";
-import { saveStoredIncident } from "@/lib/incidents/storageRepository";
 import { ShareDatabaseUnavailableError } from "@/lib/share/shareRepository";
+import { processVercelDeploymentFailureWebhook } from "@/lib/vercel/incidentProcessor";
+import { createVercelWebhookSignature } from "@/lib/vercel/signature";
 
-vi.mock("@/lib/incidents/storageRepository", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/incidents/storageRepository")>(
-    "@/lib/incidents/storageRepository"
-  );
-
+vi.mock("@/lib/vercel/incidentProcessor", () => {
   return {
-    ...actual,
-    saveStoredIncident: vi.fn()
+    processVercelDeploymentFailureWebhook: vi.fn()
   };
 });
 
-const mockedSaveStoredIncident = vi.mocked(saveStoredIncident);
+const mockedProcessWebhook = vi.mocked(processVercelDeploymentFailureWebhook);
 
 describe("POST /api/webhooks/vercel", () => {
   beforeEach(() => {
-    mockedSaveStoredIncident.mockReset();
+    vi.unstubAllEnvs();
+    mockedProcessWebhook.mockReset();
   });
 
   it("stores deployment.error webhook metadata as a placeholder incident", async () => {
-    mockedSaveStoredIncident.mockResolvedValueOnce({
+    mockedProcessWebhook.mockResolvedValueOnce({
       incidentId: "inc_0123456789abcdef",
       createdAt: "2026-05-04T00:00:00.000Z",
       sourceType: "vercel_webhook",
@@ -44,19 +41,20 @@ describe("POST /api/webhooks/vercel", () => {
       status: "stored",
       incidentId: "inc_0123456789abcdef"
     });
-    expect(mockedSaveStoredIncident).toHaveBeenCalledOnce();
-    expect(mockedSaveStoredIncident.mock.calls[0]?.[0]).toMatchObject({
-      sourceType: "vercel_webhook",
-      status: "needs_more_evidence",
-      projectId: "prj_123",
-      deploymentId: "dpl_123",
-      deploymentUrl: "deploydoctor-preview.vercel.app",
-      incident: null
+    expect(mockedProcessWebhook).toHaveBeenCalledOnce();
+    expect(mockedProcessWebhook.mock.calls[0]?.[0]).toMatchObject({
+      type: "deployment.error",
+      payload: {
+        deployment: expect.objectContaining({
+          id: "dpl_123",
+          projectId: "prj_123"
+        })
+      }
     });
   });
 
   it("stores legacy deployment-error events", async () => {
-    mockedSaveStoredIncident.mockResolvedValueOnce({
+    mockedProcessWebhook.mockResolvedValueOnce({
       incidentId: "inc_0123456789abcdef",
       createdAt: "2026-05-04T00:00:00.000Z",
       sourceType: "vercel_webhook",
@@ -78,7 +76,7 @@ describe("POST /api/webhooks/vercel", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mockedSaveStoredIncident).toHaveBeenCalledOnce();
+    expect(mockedProcessWebhook).toHaveBeenCalledOnce();
   });
 
   it("ignores unrelated webhook events", async () => {
@@ -92,18 +90,18 @@ describe("POST /api/webhooks/vercel", () => {
 
     expect(response.status).toBe(202);
     expect(body).toEqual({ status: "ignored" });
-    expect(mockedSaveStoredIncident).not.toHaveBeenCalled();
+    expect(mockedProcessWebhook).not.toHaveBeenCalled();
   });
 
   it("rejects invalid payloads", async () => {
     const response = await POST(jsonRequest({ type: "deployment.error" }));
 
     expect(response.status).toBe(400);
-    expect(mockedSaveStoredIncident).not.toHaveBeenCalled();
+    expect(mockedProcessWebhook).not.toHaveBeenCalled();
   });
 
   it("does not require raw log fields", async () => {
-    mockedSaveStoredIncident.mockResolvedValueOnce({
+    mockedProcessWebhook.mockResolvedValueOnce({
       incidentId: "inc_0123456789abcdef",
       createdAt: "2026-05-04T00:00:00.000Z",
       sourceType: "vercel_webhook",
@@ -123,11 +121,56 @@ describe("POST /api/webhooks/vercel", () => {
     const response = await POST(jsonRequest(payload));
 
     expect(response.status).toBe(200);
-    expect(mockedSaveStoredIncident).toHaveBeenCalledOnce();
+    expect(mockedProcessWebhook).toHaveBeenCalledOnce();
+  });
+
+  it("rejects invalid signatures when a webhook secret is configured", async () => {
+    vi.stubEnv("VERCEL_WEBHOOK_SECRET", "webhook-secret");
+
+    const response = await POST(
+      jsonRequest(vercelDeploymentErrorPayload(), {
+        "x-vercel-signature": "invalid"
+      })
+    );
+
+    expect(response.status).toBe(401);
+    expect(mockedProcessWebhook).not.toHaveBeenCalled();
+  });
+
+  it("accepts valid signatures when a webhook secret is configured", async () => {
+    vi.stubEnv("VERCEL_WEBHOOK_SECRET", "webhook-secret");
+    mockedProcessWebhook.mockResolvedValueOnce({
+      incidentId: "inc_0123456789abcdef",
+      createdAt: "2026-05-04T00:00:00.000Z",
+      sourceType: "vercel_webhook",
+      status: "needs_more_evidence",
+      projectId: "prj_123",
+      deploymentId: "dpl_123",
+      deploymentUrl: null,
+      title: "Vercel deployment failed",
+      summary: "Stored metadata only.",
+      incident: null,
+      rawPayloadJson: null
+    });
+    const body = JSON.stringify(vercelDeploymentErrorPayload());
+
+    const response = await POST(
+      new Request("http://localhost/api/webhooks/vercel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-vercel-signature": createVercelWebhookSignature(body, "webhook-secret")
+        },
+        body
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mockedProcessWebhook).toHaveBeenCalledOnce();
   });
 
   it("returns 503 when storage is unavailable for recognized failures", async () => {
-    mockedSaveStoredIncident.mockRejectedValueOnce(new ShareDatabaseUnavailableError());
+    mockedProcessWebhook.mockRejectedValueOnce(new ShareDatabaseUnavailableError());
 
     const response = await POST(jsonRequest(vercelDeploymentErrorPayload()));
     const body = (await response.json()) as { error: string };
@@ -158,11 +201,12 @@ function vercelDeploymentErrorPayload() {
   };
 }
 
-function jsonRequest(body: unknown): Request {
+function jsonRequest(body: unknown, headers: Record<string, string> = {}): Request {
   return new Request("http://localhost/api/webhooks/vercel", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      ...headers
     },
     body: JSON.stringify(body)
   });

@@ -11,7 +11,7 @@
 7. Open the generated `/i/[shareId]` page.
 8. Say: "The share page stores sanitized incident data only. The raw pasted log is not persisted."
 9. Close by mentioning the same UI works with Cerebras output or deterministic mock fallback.
-10. Open `/incidents` and explain that Milestone 7A can list metadata-only Vercel webhook incidents when Postgres is configured.
+10. Open `/incidents` and explain that Milestone 7B can list Vercel webhook incidents, with full analysis only after a Vercel connection is authorized.
 
 ## Quick Talking Points
 
@@ -19,8 +19,9 @@
 - Pasted logs stay client-side until analysis.
 - Server redacts obvious secrets before AI calls and before share persistence.
 - Public links are backed by unguessable share IDs.
-- Current scope is pasted log analysis. It does not read private Vercel logs from public URLs, connect Vercel accounts, inspect GitHub diffs, or push fixes.
-- Milestone 7A adds webhook ingestion plumbing, but not OAuth, token refresh, or automatic Vercel log fetching.
+- Current scope is pasted log analysis plus connected webhook evidence collection after OAuth authorization.
+- DeployDoctor does not read private Vercel logs from public URLs, inspect GitHub diffs, or push fixes.
+- Milestone 7B adds OAuth/token encryption and authorized deployment-event fetching, but not token refresh, full marketplace polish, MCP, or auto-fixes.
 - The demo covers incident reports, fallback behavior, and DB-backed sharing without auth or dashboards.
 
 ## Pre-Recording Checks

@@ -29,10 +29,9 @@ export function generateIncidentReport(
     diagnosis,
     investigationSteps: [
       {
-        title: "Ingested pasted deployment log",
+        title: investigationIngestTitle(options.sourceType ?? "pasted_log"),
         status: "completed",
-        summary:
-          "DeployDoctor analyzed only the pasted text and did not fetch private Vercel logs or external project data."
+        summary: investigationIngestSummary(options.sourceType ?? "pasted_log")
       },
       {
         title: "Redacted sensitive-looking values",
@@ -66,6 +65,24 @@ export function generateIncidentReport(
     },
     safeActions: buildSafeActions(diagnosis)
   });
+}
+
+function investigationIngestTitle(sourceType: IncidentReport["sourceType"]): string {
+  if (sourceType === "vercel_webhook") {
+    return "Ingested authorized Vercel deployment events";
+  }
+
+  return sourceType === "sample_log" ? "Ingested sample deployment log" : "Ingested pasted deployment log";
+}
+
+function investigationIngestSummary(sourceType: IncidentReport["sourceType"]): string {
+  if (sourceType === "vercel_webhook") {
+    return "DeployDoctor analyzed deployment evidence fetched with an authorized Vercel connection.";
+  }
+
+  return sourceType === "sample_log"
+    ? "DeployDoctor analyzed a fake sanitized sample log for demo purposes."
+    : "DeployDoctor analyzed only the pasted text and did not fetch private Vercel logs or external project data.";
 }
 
 function evidenceLineToCard(line: EvidenceLine, diagnosis: DiagnosisResult) {

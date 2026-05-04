@@ -10,11 +10,16 @@ DeployDoctor is a Next.js App Router project using TypeScript, Tailwind CSS, Zod
 - `app/api/diagnoses/route.ts`: legacy server diagnosis endpoint.
 - `app/api/incidents/share/route.ts`: saves sanitized incident reports for public links.
 - `app/api/diagnoses/share/route.ts`: saves sanitized diagnosis results for public links.
+- `app/api/webhooks/vercel/route.ts`: verifies Vercel webhook signatures and stores/enriches webhook incidents.
+- `app/api/vercel/oauth/start/route.ts` and `app/api/vercel/oauth/callback/route.ts`: minimal Vercel OAuth foundation.
 - `app/i/[shareId]/page.tsx`: public shared incident report page.
 - `app/d/[shareId]/page.tsx`: public shared diagnosis page.
+- `app/incidents/`: internal webhook incident inbox and detail pages.
 - `lib/incidents/`: incident contract, report generation, client adapter, share schemas, and DB repository.
 - `lib/diagnosis/`: shared diagnosis contract, redaction, classifier, Cerebras generator, mock fallback, samples, and adapter seam.
 - `lib/share/`: legacy diagnosis share request schemas, DB repository, recursive redaction before save, and client adapter.
+- `lib/security/tokenCrypto.ts`: server-only AES-GCM token encryption helpers.
+- `lib/vercel/`: OAuth helpers, API client, webhook parsing/signature processing, and connection repository.
 - `tests/diagnosis/`, `tests/incidents/`, and `tests/share/`: Vitest coverage for redaction, classification, incident reports, and share behavior.
 - `docs/`: product notes, task tracking, and future technical planning.
 
@@ -29,7 +34,7 @@ Keep raw pasted logs out of persistence. The UI keeps logs in React state, the s
 - `pnpm lint`: run ESLint with Next.js rules.
 - `pnpm typecheck`: run TypeScript checks without emitting files.
 
-Sharing requires `POSTGRES_URL` or `depdoc_POSTGRES_URL`. Incident analysis and legacy diagnosis must continue to work when that env var is absent.
+Sharing and connected webhook storage require `POSTGRES_URL` or `depdoc_POSTGRES_URL`. Vercel OAuth/log fetching also requires `VERCEL_CLIENT_ID`, `VERCEL_CLIENT_SECRET`, `VERCEL_REDIRECT_URI`, `TOKEN_ENCRYPTION_KEY`, and `VERCEL_WEBHOOK_SECRET`. Incident analysis and legacy diagnosis must continue to work when those env vars are absent.
 
 ## Coding Style & Naming Conventions
 
@@ -61,3 +66,5 @@ Pull requests should include a summary, test results, and screenshots for visibl
 ## Future Architecture Notes
 
 `DiagnosisResult` is the stable legacy contract for Cerebras output and mock fallback. `IncidentReport` is the current homepage/share contract and wraps `DiagnosisResult`. Share IDs must be unguessable and public links must never expose pasted raw logs.
+
+Vercel connected mode is a foundation only: OAuth tokens must be encrypted before storage, webhook signatures should be verified when configured, and fetched deployment events must be sanitized before they become stored incident evidence. Do not claim full marketplace integration, token refresh, GitHub diff inspection, MCP, or auto-fixes until those are actually implemented.

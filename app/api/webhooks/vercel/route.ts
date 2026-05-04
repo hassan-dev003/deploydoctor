@@ -1,17 +1,28 @@
 import { NextResponse } from "next/server";
-import { saveStoredIncident } from "@/lib/incidents/storageRepository";
 import { ShareDatabaseUnavailableError } from "@/lib/share/shareRepository";
+import { processVercelDeploymentFailureWebhook } from "@/lib/vercel/incidentProcessor";
+import { verifyVercelWebhookSignature } from "@/lib/vercel/signature";
 import {
   isVercelDeploymentFailure,
-  VercelWebhookPayloadSchema,
-  webhookToStoredIncidentInput
+  VercelWebhookPayloadSchema
 } from "@/lib/vercel/webhook";
 
 export async function POST(request: Request) {
+  const rawBody = await request.text();
+
+  if (
+    !verifyVercelWebhookSignature({
+      rawBody,
+      signature: request.headers.get("x-vercel-signature")
+    })
+  ) {
+    return NextResponse.json({ error: "Invalid Vercel webhook signature." }, { status: 401 });
+  }
+
   let body: unknown;
 
   try {
-    body = await request.json();
+    body = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ error: "Send a valid Vercel webhook JSON payload." }, { status: 400 });
   }
@@ -27,7 +38,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const incident = await saveStoredIncident(webhookToStoredIncidentInput(parsed.data));
+    const incident = await processVercelDeploymentFailureWebhook(parsed.data);
 
     return NextResponse.json({
       status: "stored",

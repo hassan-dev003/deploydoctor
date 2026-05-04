@@ -59,10 +59,32 @@ export function webhookToStoredIncidentInput(
       ? `Vercel deployment failed for ${projectName}`
       : "Vercel deployment failed",
     summary:
-      "Vercel reported a failed deployment. DeployDoctor stored webhook metadata only; connected log fetching is not implemented yet.",
+      "Vercel reported a failed deployment. DeployDoctor stored webhook metadata only; authorize Vercel before private deployment logs can be fetched.",
     incident: null,
     rawPayloadJson: webhook
   };
+}
+
+export function getVercelWebhookProjectTeam(webhook: VercelWebhookPayload) {
+  const deployment = readRecord(webhook.payload.deployment) ?? webhook.payload;
+  const project = readRecord(webhook.payload.project);
+  const team = readRecord(webhook.payload.team);
+
+  return {
+    projectId:
+      readString(project?.id) ??
+      readString(deployment.projectId) ??
+      readString(webhook.payload.projectId),
+    teamId:
+      readString(webhook.payload.teamId) ??
+      readString(team?.id) ??
+      readString(deployment.teamId)
+  };
+}
+
+export function getVercelWebhookDeploymentId(webhook: VercelWebhookPayload): string | null {
+  const deployment = readRecord(webhook.payload.deployment) ?? webhook.payload;
+  return readString(deployment.id) ?? readString(webhook.payload.deploymentId);
 }
 
 function readRecord(value: unknown): Record<string, unknown> | null {

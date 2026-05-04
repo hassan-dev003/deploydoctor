@@ -2,7 +2,7 @@
 
 DeployDoctor helps developers turn failed Vercel deployments into evidence-backed incident reports.
 
-This repository is currently at **Milestone 7A**: a paste-first incident analyst with a safe Vercel webhook ingestion foundation. The main app still analyzes pasted logs; webhook ingestion can store metadata-only placeholder incidents for failed deployments. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails.
+This repository is currently at **Milestone 7B**: a paste-first incident analyst with a Vercel authorization and authenticated log-fetching foundation. The main app still analyzes pasted logs; connected webhook ingestion can store metadata-only placeholder incidents and, when an authorized Vercel connection exists, fetch deployment events to create sanitized incident reports. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails.
 
 ## Local Setup
 
@@ -32,6 +32,24 @@ POSTGRES_URL=your_vercel_postgres_or_neon_connection_string
 
 Vercel Postgres and Neon integrations may also expose a project-prefixed `depdoc_POSTGRES_URL`; DeployDoctor supports either variable. Incident analysis still works without a Postgres URL; only saving/share links return a friendly configuration error.
 
+To enable connected Vercel authorization and signed webhooks, add:
+
+```bash
+VERCEL_CLIENT_ID=your_oauth_client_id
+VERCEL_CLIENT_SECRET=your_oauth_client_secret
+VERCEL_REDIRECT_URI=http://localhost:3000/api/vercel/oauth/callback
+TOKEN_ENCRYPTION_KEY=base64_32_byte_key
+VERCEL_WEBHOOK_SECRET=your_webhook_secret
+```
+
+Generate `TOKEN_ENCRYPTION_KEY` with:
+
+```bash
+openssl rand -base64 32
+```
+
+`TOKEN_ENCRYPTION_KEY` is required before OAuth tokens can be stored. Tokens are encrypted server-side and never exposed to the browser.
+
 ## Vercel Deployment
 
 The project is linked to Vercel as `deploydoctor` and deployed at:
@@ -46,6 +64,11 @@ Configure these production environment variables in Vercel:
 CEREBRAS_API_KEY=your_key_here
 CEREBRAS_MODEL=gpt-oss-120b
 POSTGRES_URL=your_vercel_postgres_or_neon_connection_string
+VERCEL_CLIENT_ID=your_oauth_client_id
+VERCEL_CLIENT_SECRET=your_oauth_client_secret
+VERCEL_REDIRECT_URI=https://deploydoctor.vercel.app/api/vercel/oauth/callback
+TOKEN_ENCRYPTION_KEY=base64_32_byte_key
+VERCEL_WEBHOOK_SECRET=your_webhook_secret
 ```
 
 `POSTGRES_URL` can be replaced by `depdoc_POSTGRES_URL` when using the current prefixed integration variables.
@@ -108,17 +131,20 @@ See `docs/DEMO.md` for a 60-90 second hackathon video checklist.
 
 ## Connected Vercel Foundation
 
-Milestone 7A adds the first connected-mode foundation:
+Milestone 7B adds the connected-mode authorization foundation:
 
 - `POST /api/webhooks/vercel` accepts Vercel deployment webhook-shaped JSON.
-- `deployment.error` and legacy `deployment-error` events create metadata-only placeholder incidents.
-- `/incidents` lists stored webhook-created incidents when Postgres is configured.
-- `vercel_connections` stores connection metadata for future integration install work.
+- `x-vercel-signature` is verified when `VERCEL_WEBHOOK_SECRET` is configured.
+- `deployment.error` and legacy `deployment-error` events create stored incidents.
+- `/api/vercel/oauth/start` and `/api/vercel/oauth/callback` provide minimal OAuth authorization.
+- OAuth access and refresh tokens are stored encrypted in `vercel_connections`.
+- Connected webhook incidents can fetch Vercel deployment events and convert them into sanitized `IncidentReport` data.
+- `/incidents` lists webhook-created incidents and marks metadata-only incidents that still need a connection.
 
 Not implemented yet:
 
-- Vercel OAuth or marketplace integration install.
-- Token encryption, token refresh, or automatic log fetching.
+- Full Vercel marketplace install polish.
+- Token refresh.
 - Reading private deployment logs from public deployment URLs.
 - GitHub diff inspection, MCP, or auto-fixes.
 
@@ -128,6 +154,7 @@ Not implemented yet:
 - Keep raw logs only in React state.
 - Send logs to `POST /api/incidents` for incident reports; keep `POST /api/diagnoses` for legacy diagnosis clients.
 - Receive Vercel deployment failure webhook metadata at `POST /api/webhooks/vercel`.
+- Authorize Vercel via OAuth before private deployment events can be fetched.
 - Redact obvious secrets before model calls or evidence display.
 - Return the stable `DiagnosisResult` shape from Cerebras or mock fallback.
 - Wrap diagnoses in `IncidentReport` output with investigation steps, evidence cards, repair plans, and safe actions.
@@ -140,8 +167,8 @@ Not implemented yet:
 - Auth.
 - Dashboard or saved-report editing.
 - Reading private Vercel logs from public deployment URLs.
-- Vercel account connection or OAuth.
-- Token refresh or automatic Vercel log fetching.
+- Token refresh.
+- Full Vercel marketplace integration polish.
 - GitHub diff inspection or PR generation.
 - Auto-pushing fixes.
 - Analytics.

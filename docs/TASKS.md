@@ -77,5 +77,17 @@ Status: implemented in this repository.
 - [x] Add internal `/incidents` inbox for stored webhook incidents.
 - [x] Add incident storage separate from share links.
 - [x] Add tests for webhook validation, storage, sanitization, and existing paste API coverage.
-- [ ] Future: Vercel OAuth/integration install.
-- [ ] Future: token encryption, refresh, and automatic log fetching.
+
+### Milestone 7B: Vercel Authorization And Log Fetching Foundation
+
+- [x] Add documented connected-mode env vars.
+- [x] Add AES-GCM token encryption helpers.
+- [x] Add Vercel OAuth start and callback routes with signed state and PKCE.
+- [x] Store encrypted Vercel OAuth tokens in `vercel_connections`.
+- [x] Verify Vercel webhook signatures when `VERCEL_WEBHOOK_SECRET` is configured.
+- [x] Fetch Vercel deployment events for authorized webhook incidents.
+- [x] Store sanitized `IncidentReport` data for authorized webhook incidents.
+- [x] Upgrade `/incidents` to distinguish full analysis from metadata-only incidents.
+- [ ] Future: token refresh.
+- [ ] Future: full marketplace install polish.
+- [ ] Future: GitHub diff inspection, MCP, and auto-fixes.
