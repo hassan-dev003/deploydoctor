@@ -50,6 +50,13 @@ openssl rand -base64 32
 
 `TOKEN_ENCRYPTION_KEY` is required before OAuth tokens can be stored. Tokens are encrypted server-side and never exposed to the browser.
 
+Connected mode also requires manual Vercel setup for this milestone:
+
+- Configure a Vercel webhook that points to `/api/webhooks/vercel`.
+- Use the same webhook secret in Vercel and `VERCEL_WEBHOOK_SECRET`.
+- Run a real production smoke test after OAuth setup to confirm the authorized token can fetch deployment events for the target project.
+- Keep pasted-log analysis available as the fallback path if OAuth permissions or webhook delivery need adjustment.
+
 ## Vercel Deployment
 
 The project is linked to Vercel as `deploydoctor` and deployed at:
@@ -140,11 +147,13 @@ Milestone 7B adds the connected-mode authorization foundation:
 - OAuth access and refresh tokens are stored encrypted in `vercel_connections`.
 - Connected webhook incidents can fetch Vercel deployment events and convert them into sanitized `IncidentReport` data.
 - `/incidents` lists webhook-created incidents and marks metadata-only incidents that still need a connection.
+- Webhooks must be configured manually in Vercel for this milestone.
 
 Not implemented yet:
 
 - Full Vercel marketplace install polish.
 - Token refresh.
+- Automatic Vercel webhook creation.
 - Reading private deployment logs from public deployment URLs.
 - GitHub diff inspection, MCP, or auto-fixes.
 

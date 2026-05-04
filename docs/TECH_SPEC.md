@@ -52,6 +52,13 @@ Required connected-mode environment variables:
 - `TOKEN_ENCRYPTION_KEY`
 - `VERCEL_WEBHOOK_SECRET`
 
+Connected mode also requires manual Vercel setup in Milestone 7B:
+
+- A Vercel webhook must be configured manually to call `/api/webhooks/vercel`.
+- The Vercel webhook secret must match `VERCEL_WEBHOOK_SECRET`.
+- A production smoke test should verify that the OAuth token has permission to fetch deployment events for the connected project.
+- Pasted-log analysis remains the fallback path when OAuth permissions or webhook delivery are not ready.
+
 ## Share Flow
 
 1. User clicks Share incident after analysis.
@@ -71,6 +78,7 @@ Legacy diagnosis sharing still uses `POST /api/diagnoses/share`, `diagnosis_shar
 - DeployDoctor fetches private Vercel deployment events only after OAuth authorization.
 - DeployDoctor does not refresh tokens yet.
 - DeployDoctor does not provide full marketplace polish yet.
+- DeployDoctor does not create Vercel webhooks automatically yet.
 - DeployDoctor does not inspect GitHub diffs or open PRs.
 - DeployDoctor does not auto-push fixes.
 

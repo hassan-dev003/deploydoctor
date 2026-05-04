@@ -21,7 +21,7 @@
 - Public links are backed by unguessable share IDs.
 - Current scope is pasted log analysis plus connected webhook evidence collection after OAuth authorization.
 - DeployDoctor does not read private Vercel logs from public URLs, inspect GitHub diffs, or push fixes.
-- Milestone 7B adds OAuth/token encryption and authorized deployment-event fetching, but not token refresh, full marketplace polish, MCP, or auto-fixes.
+- Milestone 7B adds OAuth/token encryption and authorized deployment-event fetching, but webhooks are configured manually and token refresh, full marketplace polish, MCP, and auto-fixes are not implemented.
 - The demo covers incident reports, fallback behavior, and DB-backed sharing without auth or dashboards.
 
 ## Pre-Recording Checks

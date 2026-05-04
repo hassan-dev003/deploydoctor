@@ -132,7 +132,7 @@ export function DiagnosisWorkspace() {
               </div>
               <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">
                 <div className="font-semibold">Next mode</div>
-                <p className="mt-1 leading-6">Connect a Vercel project and receive failure webhooks.</p>
+                <p className="mt-1 leading-6">Authorize Vercel access and receive failure webhooks.</p>
               </div>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -304,8 +304,8 @@ export function DiagnosisWorkspace() {
                 <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">
                   <div className="font-semibold">Does not yet</div>
                   <p className="mt-1 leading-6">
-                    Read private Vercel logs from public URLs, connect Vercel accounts, inspect
-                    GitHub diffs, or auto-push fixes.
+                    Create Vercel webhooks automatically, refresh tokens, inspect GitHub diffs, or
+                    auto-push fixes.
                   </p>
                 </div>
               </div>
