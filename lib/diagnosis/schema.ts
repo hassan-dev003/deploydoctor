@@ -13,6 +13,10 @@ export const DiagnosisCategorySchema = z.enum([
 
 export type DiagnosisCategory = z.infer<typeof DiagnosisCategorySchema>;
 
+export const DiagnosisGeneratorSchema = z.enum(["mock", "openai"]);
+
+export type DiagnosisGenerator = z.infer<typeof DiagnosisGeneratorSchema>;
+
 export const EvidenceLineSchema = z.object({
   lineNumber: z.number().int().positive().optional(),
   text: z.string().min(1)
@@ -30,7 +34,7 @@ export const DiagnosisResultSchema = z.object({
   filesToCheck: z.array(z.string().min(1)),
   commands: z.array(z.string().min(1)),
   nextDiagnosticCommand: z.string().min(1),
-  generatedBy: z.literal("mock"),
+  generatedBy: DiagnosisGeneratorSchema,
   analyzedAt: z.string().datetime()
 });
 

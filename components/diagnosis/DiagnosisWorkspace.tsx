@@ -2,6 +2,7 @@
 
 import { AlertTriangle, ClipboardPaste, Lock, Share2, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
+import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
 import { analyzePastedLog } from "@/lib/diagnosis/diagnosisAdapter";
 import { sampleLogs } from "@/lib/diagnosis/samples";
 import type { DiagnosisResult } from "@/lib/diagnosis/schema";
@@ -28,14 +29,24 @@ export function DiagnosisWorkspace() {
       return;
     }
 
+    if (trimmedLog.length > MAX_LOG_CHARS) {
+      setError(oversizedLogMessage);
+      setDiagnosis(null);
+      return;
+    }
+
     setIsAnalyzing(true);
     setError(null);
 
     try {
       const result = await analyzePastedLog(trimmedLog);
       setDiagnosis(result);
-    } catch {
-      setError("DeployDoctor could not analyze this log. Try a shorter excerpt around the first error.");
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "DeployDoctor could not analyze this log. Try a shorter excerpt around the first error."
+      );
       setDiagnosis(null);
     } finally {
       setIsAnalyzing(false);
@@ -49,7 +60,7 @@ export function DiagnosisWorkspace() {
           <header className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-3 py-1 text-sm font-medium text-teal-800 shadow-sm">
               <Sparkles className="h-4 w-4" />
-              Milestone 1: deterministic local diagnosis
+              Milestone 2: server diagnosis with mock fallback
             </div>
             <div className="space-y-2">
               <h1 className="max-w-3xl text-4xl font-semibold tracking-normal text-slate-950 sm:text-5xl">
@@ -106,8 +117,9 @@ export function DiagnosisWorkspace() {
               <div className="flex items-start gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
                 <Lock className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
-                  Privacy note: Milestone 1 keeps raw logs only in this browser session's React state.
-                  Evidence is redacted before display. Nothing is saved, shared, or placed in the URL.
+                  Privacy note: raw logs stay in React state until you analyze. The server redacts
+                  obvious secrets before model calls or evidence display. Nothing is saved, shared,
+                  or placed in the URL.
                 </p>
               </div>
 
@@ -149,9 +161,9 @@ export function DiagnosisWorkspace() {
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-6 text-slate-600 shadow-sm">
               <h2 className="text-lg font-semibold text-slate-950">Diagnosis preview</h2>
               <p className="mt-2 text-sm leading-6">
-                Choose a sample log or paste your own failed deployment output. The local mock analyzer
-                will return a structured result using the same contract future AI and share-page features
-                will use.
+                Choose a sample log or paste your own failed deployment output. The API returns the
+                same structured result whether OpenAI succeeds or DeployDoctor falls back to the mock
+                diagnosis path.
               </p>
             </div>
           )}

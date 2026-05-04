@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { classifyDeploymentLog } from "@/lib/diagnosis/classify";
 import { generateMockDiagnosis } from "@/lib/diagnosis/generateMockDiagnosis";
+import { DiagnosisResultSchema } from "@/lib/diagnosis/schema";
 
 describe("classifyDeploymentLog", () => {
   it.each([
@@ -35,5 +36,17 @@ Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456`);
     expect(result.evidenceLines.map((line) => line.text).join("\n")).not.toContain(
       "abcdefghijklmnopqrstuvwxyz123456"
     );
+  });
+
+  it("accepts mock and openai generatedBy values", () => {
+    const base = generateMockDiagnosis("Module not found: Can't resolve './missing'");
+
+    expect(DiagnosisResultSchema.parse(base).generatedBy).toBe("mock");
+    expect(
+      DiagnosisResultSchema.parse({
+        ...base,
+        generatedBy: "openai"
+      }).generatedBy
+    ).toBe("openai");
   });
 });

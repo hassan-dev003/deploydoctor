@@ -6,11 +6,12 @@ DeployDoctor is a Next.js App Router project using TypeScript, Tailwind CSS, Zod
 
 - `app/`: routes, layout, global styles, and the tool-first homepage.
 - `components/diagnosis/`: UI components for the pasted-log workflow and diagnosis result card.
-- `lib/diagnosis/`: shared diagnosis contract, redaction, classifier, mock generator, samples, and adapter seam.
+- `app/api/diagnoses/route.ts`: server diagnosis endpoint.
+- `lib/diagnosis/`: shared diagnosis contract, redaction, classifier, OpenAI generator, mock fallback, samples, and adapter seam.
 - `tests/diagnosis/`: Vitest coverage for redaction and classification.
 - `docs/`: product notes, task tracking, and future technical planning.
 
-Keep raw pasted logs out of persistence. Milestone 1 stores logs only in React state and displays only redacted evidence.
+Keep raw pasted logs out of persistence. The UI keeps logs in React state, and the server redacts before OpenAI calls or evidence display.
 
 ## Build, Test, and Development Commands
 
@@ -23,7 +24,7 @@ Keep raw pasted logs out of persistence. Milestone 1 stores logs only in React s
 
 ## Coding Style & Naming Conventions
 
-Use strict TypeScript and small modules. UI should depend on diagnosis adapter functions and shared types, not regex internals.
+Use strict TypeScript and small modules. UI should depend on diagnosis adapter functions and shared types, not classifier or provider internals.
 
 - Components: `PascalCase`, for example `DiagnosisResultCard`.
 - Functions and variables: `camelCase`, for example `generateMockDiagnosis`.
@@ -50,4 +51,4 @@ Pull requests should include a summary, test results, and screenshots for visibl
 
 ## Future Architecture Notes
 
-`DiagnosisResult` is the stable contract for UI, future API routes, and future DB persistence. Milestone 2 should replace the mock adapter with server-side OpenAI diagnosis returning the same shape. Milestone 3 should add DB-backed saved/share pages without storing raw logs.
+`DiagnosisResult` is the stable contract for UI, API routes, OpenAI output, mock fallback, and future DB persistence. Milestone 3 should add DB-backed saved/share pages without storing raw logs.

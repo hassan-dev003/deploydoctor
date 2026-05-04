@@ -2,7 +2,7 @@
 
 DeployDoctor helps developers understand why a Vercel deployment failed and what to try next.
 
-This repository is currently at **Milestone 1**: a local Next.js App Router demo with deterministic mocked diagnosis. There is no OpenAI integration, database, auth, or share-page persistence yet. The MVP input is pasted logs only.
+This repository is currently at **Milestone 2**: a Next.js App Router demo with server-side diagnosis. The app calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. There is no database, auth, or share-page persistence yet. The MVP input is pasted logs only.
 
 ## Local Setup
 
@@ -14,6 +14,15 @@ pnpm dev
 ```
 
 Open the local URL printed by Next.js, usually `http://localhost:3000`.
+
+To enable OpenAI diagnosis, add:
+
+```bash
+OPENAI_API_KEY=your_key_here
+OPENAI_MODEL=gpt-5-mini
+```
+
+`OPENAI_MODEL` is optional and defaults to `gpt-5-mini`.
 
 ## Available Commands
 
@@ -47,18 +56,18 @@ pnpm build
 
 Creates a production Next.js build.
 
-## Milestone 1 Scope
+## Current Scope
 
 - Paste raw Vercel logs into the homepage tool.
 - Keep raw logs only in React state.
-- Redact obvious secrets before showing evidence.
-- Classify common deployment failures with deterministic rules.
-- Show a mocked, structured diagnosis with root cause, evidence, next steps, files to check, and commands to try.
+- Send logs to `POST /api/diagnoses` for server-side diagnosis.
+- Redact obvious secrets before model calls or evidence display.
+- Return the stable `DiagnosisResult` shape from OpenAI or mock fallback.
+- Show a structured diagnosis with root cause, evidence, next steps, files to check, and commands to try.
 - Keep a disabled share affordance for future DB-backed share pages.
 
 ## Not Implemented Yet
 
-- OpenAI diagnosis.
 - Vercel deployment import.
 - Database persistence.
 - Share pages.

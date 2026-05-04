@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 1 is a local mocked Next.js App Router app. It does not call OpenAI, store logs, connect to a database, or create share pages.
+Milestone 2 is a Next.js App Router app with server-side diagnosis. It calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. It does not store logs, connect to a database, or create share pages.
 
 ## Diagnosis Contract
 
@@ -13,19 +13,19 @@ Milestone 1 is a local mocked Next.js App Router app. It does not call OpenAI, s
 - future server/API diagnosis,
 - future DB-backed saved diagnosis records.
 
-The current `generatedBy` value is `mock`. Future milestones can extend this once OpenAI is integrated.
+`generatedBy` is `mock` for fallback output and `openai` for successful model output.
 
 ## Diagnosis Flow
 
 1. User pastes logs into the homepage.
-2. Raw logs remain only in React state.
+2. Raw logs remain only in React state until analysis.
 3. UI calls `analyzePastedLog`.
-4. Milestone 1 adapter calls `generateMockDiagnosis`.
-5. Classifier identifies a likely category.
-6. Evidence lines are redacted before display.
-7. UI renders a structured diagnosis result.
+4. Adapter posts to `POST /api/diagnoses`.
+5. API validates size and shape.
+6. Server redacts obvious secrets before any OpenAI call.
+7. OpenAI Structured Outputs returns `DiagnosisResult`, or the server falls back to `generateMockDiagnosis`.
+8. UI renders the structured diagnosis result.
 
 ## Future Seams
 
-- Milestone 2: replace the adapter implementation with a server/API call that returns `DiagnosisResult`.
 - Milestone 3: persist sanitized diagnosis data for share pages. Do not store raw logs.

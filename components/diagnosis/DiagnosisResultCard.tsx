@@ -13,7 +13,7 @@ export function DiagnosisResultCard({ diagnosis }: DiagnosisResultCardProps) {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wide text-teal-700">
-              {diagnosis.category.replaceAll("_", " ")}
+              {diagnosis.category.replaceAll("_", " ")} · {diagnosis.generatedBy}
             </p>
             <h2 className="text-2xl font-semibold text-slate-950">{diagnosis.title}</h2>
           </div>

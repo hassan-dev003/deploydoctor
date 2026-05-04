@@ -16,15 +16,20 @@ Status: implemented in this repository.
 - [x] Add disabled future share affordance without implementing persistence.
 - [x] Add Vitest coverage for redaction, classifier basics, and evidence redaction.
 
+## Milestone 2: OpenAI Server-Side Diagnosis
+
+Status: implemented in this repository.
+
+- [x] Future-proof `generatedBy` for `mock` and `openai`.
+- [x] Add input size guard with excerpt guidance.
+- [x] Add `POST /api/diagnoses`.
+- [x] Replace the local mock adapter body with a server call.
+- [x] Use OpenAI structured output that returns the existing `DiagnosisResult` shape.
+- [x] Keep redaction before any model request.
+- [x] Add mock fallback when `OPENAI_API_KEY` is missing or the model call fails.
+- [x] Add tests for API validation, redaction-before-model, OpenAI output, and fallback behavior.
+
 ## Next Milestones
-
-### Milestone 2: OpenAI Server-Side Diagnosis
-
-- [ ] Add a server/API diagnosis route.
-- [ ] Replace the local mock adapter body with a server call.
-- [ ] Use OpenAI structured output that returns the existing `DiagnosisResult` shape.
-- [ ] Keep redaction before any model request.
-- [ ] Add model error handling and fallback messaging.
 
 ### Milestone 3: DB-Backed Saved/Share Pages
 
