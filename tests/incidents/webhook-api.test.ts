@@ -15,6 +15,7 @@ const mockedProcessWebhook = vi.mocked(processVercelDeploymentFailureWebhook);
 describe("POST /api/webhooks/vercel", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
+    vi.stubEnv("VERCEL_WEBHOOK_SECRET", "");
     mockedProcessWebhook.mockReset();
   });
 

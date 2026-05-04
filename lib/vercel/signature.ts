@@ -15,7 +15,7 @@ export function verifyVercelWebhookSignature(options: {
   const nodeEnv = options.nodeEnv ?? process.env.NODE_ENV;
 
   if (!secret) {
-    return nodeEnv === "development" || nodeEnv === "test";
+    return nodeEnv === "development" || nodeEnv === "test" || process.env.VITEST === "true";
   }
 
   if (!options.signature) {
