@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { generateMockDiagnosis } from "@/lib/diagnosis/generateMockDiagnosis";
 import {
   createShareId,
+  getPostgresUrl,
   getDiagnosisShare,
   prepareDiagnosisShareRecord,
   saveDiagnosisShare,
@@ -49,6 +50,15 @@ describe("share repository helpers", () => {
     expect(record).not.toHaveProperty("input");
     expect(record).not.toHaveProperty("prompt");
     expect(record).not.toHaveProperty("pastedText");
+  });
+
+  it("supports prefixed Postgres URL env vars", () => {
+    vi.stubEnv("POSTGRES_URL", "");
+    vi.stubEnv("depdoc_POSTGRES_URL", "postgres://prefixed-example");
+
+    expect(getPostgresUrl()).toBe("postgres://prefixed-example");
+
+    vi.unstubAllEnvs();
   });
 });
 

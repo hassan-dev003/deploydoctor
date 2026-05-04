@@ -5,23 +5,26 @@ import {
   type DiagnosisResult
 } from "./schema";
 
-const defaultModel = "gpt-5-mini";
+const CEREBRAS_BASE_URL = "https://api.cerebras.ai/v1";
+const defaultModel = "gpt-oss-120b";
 
-type ResponsesClient = {
-  responses: {
-    create: (request: Record<string, unknown>) => Promise<unknown>;
+type ChatCompletionsClient = {
+  chat: {
+    completions: {
+      create: (request: Record<string, unknown>) => Promise<unknown>;
+    };
   };
 };
 
-type GenerateOpenAIDiagnosisOptions = {
+type GenerateCerebrasDiagnosisOptions = {
   sanitizedLog: string;
   apiKey?: string;
   model?: string;
-  client?: ResponsesClient;
+  client?: ChatCompletionsClient;
 };
 
 const diagnosisJsonSchema = {
-  type: "object",
+  type: "object" as const,
   additionalProperties: false,
   properties: {
     category: {
@@ -69,7 +72,7 @@ const diagnosisJsonSchema = {
     nextDiagnosticCommand: { type: "string" },
     generatedBy: {
       type: "string",
-      enum: ["openai"]
+      enum: ["cerebras"]
     }
   },
   required: [
@@ -88,26 +91,29 @@ const diagnosisJsonSchema = {
   ]
 };
 
-export async function generateOpenAIDiagnosis({
+export async function generateCerebrasDiagnosis({
   sanitizedLog,
-  apiKey = process.env.OPENAI_API_KEY,
-  model = process.env.OPENAI_MODEL ?? defaultModel,
+  apiKey = process.env.CEREBRAS_API_KEY,
+  model = process.env.CEREBRAS_MODEL ?? defaultModel,
   client
-}: GenerateOpenAIDiagnosisOptions): Promise<DiagnosisResult> {
+}: GenerateCerebrasDiagnosisOptions): Promise<DiagnosisResult> {
   if (!apiKey && !client) {
-    throw new Error("OPENAI_API_KEY is not configured.");
+    throw new Error("CEREBRAS_API_KEY is not configured.");
   }
 
-  const openai = client ?? new OpenAI({ apiKey });
+  const cerebras = client ?? new OpenAI({
+    apiKey,
+    baseURL: CEREBRAS_BASE_URL
+  });
   const localClassification = classifyDeploymentLog(sanitizedLog);
 
-  const response = await openai.responses.create({
+  const response = await cerebras.chat.completions.create({
     model,
-    input: [
+    messages: [
       {
         role: "system",
         content:
-          "You are DeployDoctor, a deployment assistant for Vercel and Next.js failures. Return only the requested structured diagnosis. Be specific, practical, and avoid claiming access to private Vercel logs or external systems."
+          "You are DeployDoctor, a deployment assistant for Vercel and Next.js failures. Return only the requested structured diagnosis JSON. Be specific, practical, and avoid claiming access to private Vercel logs or external systems."
       },
       {
         role: "user",
@@ -121,9 +127,9 @@ export async function generateOpenAIDiagnosis({
         ].join("\n")
       }
     ],
-    text: {
-      format: {
-        type: "json_schema",
+    response_format: {
+      type: "json_schema",
+      json_schema: {
         name: "deploydoctor_diagnosis",
         strict: true,
         schema: diagnosisJsonSchema
@@ -135,25 +141,33 @@ export async function generateOpenAIDiagnosis({
 
   return DiagnosisResultSchema.parse({
     ...parsed,
-    generatedBy: "openai",
+    generatedBy: "cerebras",
     analyzedAt: new Date().toISOString()
   });
 }
 
 function extractStructuredOutput(response: unknown): Record<string, unknown> {
-  if (isRecord(response) && isRecord(response.output_parsed)) {
-    return response.output_parsed;
-  }
+  // Chat Completions API: response.choices[0].message.content contains the JSON string
+  if (isRecord(response) && Array.isArray(response.choices)) {
+    const choice = response.choices[0] as unknown;
 
-  if (isRecord(response) && typeof response.output_text === "string") {
-    const parsed = JSON.parse(response.output_text) as unknown;
+    if (isRecord(choice) && isRecord(choice.message)) {
+      // Try parsed field first (some OpenAI-compatible clients populate it)
+      if (isRecord(choice.message.parsed)) {
+        return choice.message.parsed;
+      }
 
-    if (isRecord(parsed)) {
-      return parsed;
+      if (typeof choice.message.content === "string") {
+        const parsed = JSON.parse(choice.message.content) as unknown;
+
+        if (isRecord(parsed)) {
+          return parsed;
+        }
+      }
     }
   }
 
-  throw new Error("OpenAI response did not include structured diagnosis output.");
+  throw new Error("Cerebras response did not include structured diagnosis output.");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

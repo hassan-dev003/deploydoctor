@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/diagnoses/route";
 import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
-import { generateOpenAIDiagnosis } from "@/lib/diagnosis/generateOpenAIDiagnosis";
+import { generateCerebrasDiagnosis } from "@/lib/diagnosis/generateCerebrasDiagnosis";
 import { generateServerDiagnosis } from "@/lib/diagnosis/generateServerDiagnosis";
 import { generateMockDiagnosis } from "@/lib/diagnosis/generateMockDiagnosis";
 import { DiagnosisResultSchema } from "@/lib/diagnosis/schema";
@@ -23,8 +23,8 @@ describe("POST /api/diagnoses", () => {
     expect(body.error).toBe(oversizedLogMessage);
   });
 
-  it("falls back to mock output when OPENAI_API_KEY is missing", async () => {
-    vi.stubEnv("OPENAI_API_KEY", "");
+  it("falls back to mock output when CEREBRAS_API_KEY is missing", async () => {
+    vi.stubEnv("CEREBRAS_API_KEY", "");
 
     const response = await POST(jsonRequest({ log: "Module not found: Can't resolve './x'" }));
     const body = (await response.json()) as { generatedBy: string; category: string };
@@ -38,21 +38,21 @@ describe("POST /api/diagnoses", () => {
 });
 
 describe("generateServerDiagnosis", () => {
-  it("redacts logs before the OpenAI generator receives input", async () => {
-    const openAIDiagnosis = vi.fn(async (sanitizedLog: string) => ({
+  it("redacts logs before the Cerebras generator receives input", async () => {
+    const cerebrasDiagnosis = vi.fn(async (sanitizedLog: string) => ({
       ...generateMockDiagnosis(sanitizedLog),
-      generatedBy: "openai" as const
+      generatedBy: "cerebras" as const
     }));
 
     await generateServerDiagnosis(
       `OPENAI_API_KEY=sk_test_abcdefghijklmnopqrstuvwxyz
 Error: Missing required environment variable STRIPE_SECRET_KEY`,
-      { apiKey: "test-key", openAIDiagnosis }
+      { apiKey: "test-key", cerebrasDiagnosis }
     );
 
-    expect(openAIDiagnosis).toHaveBeenCalledOnce();
-    expect(openAIDiagnosis.mock.calls[0]?.[0]).toContain("OPENAI_API_KEY=[REDACTED]");
-    expect(openAIDiagnosis.mock.calls[0]?.[0]).not.toContain(
+    expect(cerebrasDiagnosis).toHaveBeenCalledOnce();
+    expect(cerebrasDiagnosis.mock.calls[0]?.[0]).toContain("OPENAI_API_KEY=[REDACTED]");
+    expect(cerebrasDiagnosis.mock.calls[0]?.[0]).not.toContain(
       "sk_test_abcdefghijklmnopqrstuvwxyz"
     );
   });
@@ -60,7 +60,7 @@ Error: Missing required environment variable STRIPE_SECRET_KEY`,
   it("falls back to mock output when the model call fails", async () => {
     const result = await generateServerDiagnosis("Type error: TS2322", {
       apiKey: "test-key",
-      openAIDiagnosis: async () => {
+      cerebrasDiagnosis: async () => {
         throw new Error("model unavailable");
       }
     });
@@ -70,11 +70,11 @@ Error: Missing required environment variable STRIPE_SECRET_KEY`,
   });
 });
 
-describe("generateOpenAIDiagnosis", () => {
-  it("adds server-owned analyzedAt to valid OpenAI output", async () => {
+describe("generateCerebrasDiagnosis", () => {
+  it("adds server-owned analyzedAt to valid Cerebras output", async () => {
     const mockDiagnosis = {
       ...generateMockDiagnosis("Module not found: Can't resolve './x'"),
-      generatedBy: "openai" as const
+      generatedBy: "cerebras" as const
     };
     const modelOutput = { ...mockDiagnosis } as Partial<typeof mockDiagnosis>;
 
@@ -84,29 +84,37 @@ describe("generateOpenAIDiagnosis", () => {
       void request;
 
       return {
-        output_parsed: modelOutput
+        choices: [
+          {
+            message: {
+              content: JSON.stringify(modelOutput)
+            }
+          }
+        ]
       };
     });
     const client = {
-      responses: {
-        create
+      chat: {
+        completions: {
+          create
+        }
       }
     };
 
-    const result = await generateOpenAIDiagnosis({
+    const result = await generateCerebrasDiagnosis({
       sanitizedLog: "Module not found: Can't resolve './x'",
       apiKey: "test-key",
       client
     });
 
-    expect(result.generatedBy).toBe("openai");
+    expect(result.generatedBy).toBe("cerebras");
     expect(DiagnosisResultSchema.parse(result).analyzedAt).toBe(result.analyzedAt);
     expect(new Date(result.analyzedAt).toISOString()).toBe(result.analyzedAt);
     expect(create).toHaveBeenCalledOnce();
 
     const request = create.mock.calls[0]?.[0] as {
-      text?: {
-        format?: {
+      response_format?: {
+        json_schema?: {
           schema?: {
             properties?: Record<string, unknown>;
             required?: string[];
@@ -114,7 +122,7 @@ describe("generateOpenAIDiagnosis", () => {
         };
       };
     };
-    const schema = request.text?.format?.schema;
+    const schema = request.response_format?.json_schema?.schema;
 
     expect(schema?.properties).not.toHaveProperty("analyzedAt");
     expect(schema?.required).not.toContain("analyzedAt");

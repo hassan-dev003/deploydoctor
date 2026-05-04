@@ -2,7 +2,7 @@
 
 DeployDoctor helps developers understand why a Vercel deployment failed and what to try next.
 
-This repository is currently at **Milestone 3**: a Next.js App Router demo with server-side diagnosis and DB-backed public share pages. The app calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. The MVP input is pasted logs only.
+This repository is currently at **Milestone 3**: a Next.js App Router demo with server-side diagnosis and DB-backed public share pages. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails. The MVP input is pasted logs only.
 
 ## Local Setup
 
@@ -15,14 +15,14 @@ pnpm dev
 
 Open the local URL printed by Next.js, usually `http://localhost:3000`.
 
-To enable OpenAI diagnosis, add:
+To enable AI diagnosis, add:
 
 ```bash
-OPENAI_API_KEY=your_key_here
-OPENAI_MODEL=gpt-5-mini
+CEREBRAS_API_KEY=your_key_here
+CEREBRAS_MODEL=gpt-oss-120b
 ```
 
-`OPENAI_MODEL` is optional and defaults to `gpt-5-mini`.
+`CEREBRAS_MODEL` is optional and defaults to `gpt-oss-120b`. Other available models include `llama3.1-8b` (fastest) and `qwen-3-235b-a22b-instruct-2507` (preview).
 
 To enable saved share links, add:
 
@@ -70,7 +70,7 @@ Creates a production Next.js build.
 - Keep raw logs only in React state.
 - Send logs to `POST /api/diagnoses` for server-side diagnosis.
 - Redact obvious secrets before model calls or evidence display.
-- Return the stable `DiagnosisResult` shape from OpenAI or mock fallback.
+- Return the stable `DiagnosisResult` shape from Cerebras or mock fallback.
 - Show a structured diagnosis with root cause, evidence, next steps, files to check, and commands to try.
 - Save sanitized diagnosis results to Postgres and share them at `/d/[shareId]`.
 - Store only sanitized diagnosis data, never the pasted raw log.

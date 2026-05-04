@@ -206,7 +206,7 @@ export function DiagnosisWorkspace() {
               <h2 className="text-lg font-semibold text-slate-950">Diagnosis preview</h2>
               <p className="mt-2 text-sm leading-6">
                 Choose a sample log or paste your own failed deployment output. The API returns the
-                same structured result whether OpenAI succeeds or DeployDoctor falls back to the mock
+                same structured result whether the AI model succeeds or DeployDoctor falls back to the mock
                 diagnosis path.
               </p>
             </div>

@@ -2,7 +2,7 @@
 
 ## Current Milestone
 
-Milestone 3 is a Next.js App Router app with server-side diagnosis and DB-backed public share pages. Diagnosis calls OpenAI when `OPENAI_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. Sharing requires `POSTGRES_URL`; diagnosis still works without it.
+Milestone 3 is a Next.js App Router app with server-side diagnosis and DB-backed public share pages. Diagnosis calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mock diagnosis when the key is missing or the model call fails. Sharing requires `POSTGRES_URL`; diagnosis still works without it.
 
 ## Diagnosis Contract
 
@@ -13,7 +13,7 @@ Milestone 3 is a Next.js App Router app with server-side diagnosis and DB-backed
 - future server/API diagnosis,
 - future DB-backed saved diagnosis records.
 
-`generatedBy` is `mock` for fallback output and `openai` for successful model output.
+`generatedBy` is `mock` for fallback output and `cerebras` for successful model output.
 
 ## Diagnosis Flow
 
@@ -22,8 +22,8 @@ Milestone 3 is a Next.js App Router app with server-side diagnosis and DB-backed
 3. UI calls `analyzePastedLog`.
 4. Adapter posts to `POST /api/diagnoses`.
 5. API validates size and shape.
-6. Server redacts obvious secrets before any OpenAI call.
-7. OpenAI Structured Outputs returns `DiagnosisResult`, or the server falls back to `generateMockDiagnosis`.
+6. Server redacts obvious secrets before any Cerebras call.
+7. Cerebras Structured Outputs returns `DiagnosisResult`, or the server falls back to `generateMockDiagnosis`.
 8. UI renders the structured diagnosis result.
 
 ## Share Flow
@@ -41,4 +41,4 @@ The DB stores `shareId`, `createdAt`, `category`, `generatedBy`, `title`, `summa
 
 ## Future Seams
 
-- Deployment polish should configure `POSTGRES_URL`, `OPENAI_API_KEY`, and `OPENAI_MODEL` in Vercel.
+- Deployment polish should configure `POSTGRES_URL`, `CEREBRAS_API_KEY`, and `CEREBRAS_MODEL` in Vercel.

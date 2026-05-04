@@ -13,7 +13,7 @@ export const DiagnosisCategorySchema = z.enum([
 
 export type DiagnosisCategory = z.infer<typeof DiagnosisCategorySchema>;
 
-export const DiagnosisGeneratorSchema = z.enum(["mock", "openai"]);
+export const DiagnosisGeneratorSchema = z.enum(["mock", "cerebras"]);
 
 export type DiagnosisGenerator = z.infer<typeof DiagnosisGeneratorSchema>;
 

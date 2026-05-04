@@ -16,18 +16,18 @@ Status: implemented in this repository.
 - [x] Add disabled future share affordance without implementing persistence.
 - [x] Add Vitest coverage for redaction, classifier basics, and evidence redaction.
 
-## Milestone 2: OpenAI Server-Side Diagnosis
+## Milestone 2: AI Server-Side Diagnosis (Cerebras)
 
 Status: implemented in this repository.
 
-- [x] Future-proof `generatedBy` for `mock` and `openai`.
+- [x] Future-proof `generatedBy` for `mock` and `cerebras`.
 - [x] Add input size guard with excerpt guidance.
 - [x] Add `POST /api/diagnoses`.
 - [x] Replace the local mock adapter body with a server call.
-- [x] Use OpenAI structured output that returns the existing `DiagnosisResult` shape.
+- [x] Use Cerebras structured output that returns the existing `DiagnosisResult` shape.
 - [x] Keep redaction before any model request.
-- [x] Add mock fallback when `OPENAI_API_KEY` is missing or the model call fails.
-- [x] Add tests for API validation, redaction-before-model, OpenAI output, and fallback behavior.
+- [x] Add mock fallback when `CEREBRAS_API_KEY` is missing or the model call fails.
+- [x] Add tests for API validation, redaction-before-model, Cerebras output, and fallback behavior.
 
 ## Next Milestones
 

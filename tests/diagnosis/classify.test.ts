@@ -38,15 +38,15 @@ Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456`);
     );
   });
 
-  it("accepts mock and openai generatedBy values", () => {
+  it("accepts mock and cerebras generatedBy values", () => {
     const base = generateMockDiagnosis("Module not found: Can't resolve './missing'");
 
     expect(DiagnosisResultSchema.parse(base).generatedBy).toBe("mock");
     expect(
       DiagnosisResultSchema.parse({
         ...base,
-        generatedBy: "openai"
+        generatedBy: "cerebras"
       }).generatedBy
-    ).toBe("openai");
+    ).toBe("cerebras");
   });
 });

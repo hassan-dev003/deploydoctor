@@ -1,11 +1,11 @@
+import { generateCerebrasDiagnosis } from "./generateCerebrasDiagnosis";
 import { generateMockDiagnosis } from "./generateMockDiagnosis";
-import { generateOpenAIDiagnosis } from "./generateOpenAIDiagnosis";
 import { redactSecrets } from "./redact";
 import type { DiagnosisResult } from "./schema";
 
 type GenerateServerDiagnosisOptions = {
   apiKey?: string;
-  openAIDiagnosis?: (sanitizedLog: string) => Promise<DiagnosisResult>;
+  cerebrasDiagnosis?: (sanitizedLog: string) => Promise<DiagnosisResult>;
 };
 
 export async function generateServerDiagnosis(
@@ -13,18 +13,18 @@ export async function generateServerDiagnosis(
   options: GenerateServerDiagnosisOptions = {}
 ): Promise<DiagnosisResult> {
   const sanitizedLog = redactSecrets(rawLog);
-  const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY;
+  const apiKey = options.apiKey ?? process.env.CEREBRAS_API_KEY;
 
   if (!apiKey) {
     return generateMockDiagnosis(sanitizedLog);
   }
 
   try {
-    if (options.openAIDiagnosis) {
-      return await options.openAIDiagnosis(sanitizedLog);
+    if (options.cerebrasDiagnosis) {
+      return await options.cerebrasDiagnosis(sanitizedLog);
     }
 
-    return await generateOpenAIDiagnosis({ sanitizedLog, apiKey });
+    return await generateCerebrasDiagnosis({ sanitizedLog, apiKey });
   } catch {
     return generateMockDiagnosis(sanitizedLog);
   }

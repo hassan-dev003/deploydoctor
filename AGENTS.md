@@ -9,12 +9,12 @@ DeployDoctor is a Next.js App Router project using TypeScript, Tailwind CSS, Zod
 - `app/api/diagnoses/route.ts`: server diagnosis endpoint.
 - `app/api/diagnoses/share/route.ts`: saves sanitized diagnosis results for public links.
 - `app/d/[shareId]/page.tsx`: public shared diagnosis page.
-- `lib/diagnosis/`: shared diagnosis contract, redaction, classifier, OpenAI generator, mock fallback, samples, and adapter seam.
+- `lib/diagnosis/`: shared diagnosis contract, redaction, classifier, Cerebras generator, mock fallback, samples, and adapter seam.
 - `lib/share/`: share request schemas, DB repository, recursive redaction before save, and client adapter.
 - `tests/diagnosis/`: Vitest coverage for redaction and classification.
 - `docs/`: product notes, task tracking, and future technical planning.
 
-Keep raw pasted logs out of persistence. The UI keeps logs in React state, the server redacts before OpenAI calls, and sharing stores only sanitized `DiagnosisResult` JSON plus metadata.
+Keep raw pasted logs out of persistence. The UI keeps logs in React state, the server redacts before Cerebras calls, and sharing stores only sanitized `DiagnosisResult` JSON plus metadata.
 
 ## Build, Test, and Development Commands
 
@@ -56,4 +56,4 @@ Pull requests should include a summary, test results, and screenshots for visibl
 
 ## Future Architecture Notes
 
-`DiagnosisResult` is the stable contract for UI, API routes, OpenAI output, mock fallback, and DB-backed share pages. Share IDs must be unguessable and public links must never expose pasted raw logs.
+`DiagnosisResult` is the stable contract for UI, API routes, Cerebras output, mock fallback, and DB-backed share pages. Share IDs must be unguessable and public links must never expose pasted raw logs.
