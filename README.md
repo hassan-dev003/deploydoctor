@@ -44,7 +44,7 @@ Starts the local Next.js development server.
 pnpm test
 ```
 
-Runs Vitest tests for redaction and rule-based classification.
+Runs Vitest tests for diagnosis, redaction, classification, and sharing behavior.
 
 ```bash
 pnpm lint

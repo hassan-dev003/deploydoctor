@@ -1,4 +1,5 @@
-import { CalendarClock, Lock } from "lucide-react";
+import { ArrowLeft, CalendarClock, Lock } from "lucide-react";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DiagnosisResultCard } from "@/components/diagnosis/DiagnosisResultCard";
 import { getDiagnosisShare } from "@/lib/share/shareRepository";
@@ -27,6 +28,14 @@ export default async function SharedDiagnosisPage({ params }: SharedDiagnosisPag
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
       <section className="mx-auto max-w-3xl space-y-4">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 transition hover:text-teal-800"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          New diagnosis
+        </Link>
+
         <div className="rounded-lg border border-teal-200 bg-teal-50 p-4 text-sm text-teal-900">
           <div className="mb-2 flex items-center gap-2 font-semibold">
             <Lock className="h-4 w-4" />

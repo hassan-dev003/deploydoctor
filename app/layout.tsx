@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DeployDoctor",
-  description: "Paste Vercel deployment logs and get a clear mocked diagnosis."
+  description: "Paste Vercel deployment logs and get a clear AI-assisted diagnosis."
 };
 
 export default function RootLayout({

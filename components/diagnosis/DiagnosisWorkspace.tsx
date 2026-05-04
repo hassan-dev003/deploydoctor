@@ -64,7 +64,7 @@ export function DiagnosisWorkspace() {
           <header className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white px-3 py-1 text-sm font-medium text-teal-800 shadow-sm">
               <Sparkles className="h-4 w-4" />
-              Milestone 2: server diagnosis with mock fallback
+              Milestone 3: AI diagnosis with shareable reports
             </div>
             <div className="space-y-2">
               <h1 className="max-w-3xl text-4xl font-semibold tracking-normal text-slate-950 sm:text-5xl">
