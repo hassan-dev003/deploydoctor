@@ -1,5 +1,6 @@
 import { Activity, ClipboardList, FileSearch, ShieldCheck, Terminal, TextSearch } from "lucide-react";
 import type { IncidentReport } from "@/lib/incidents/schema";
+import { CopyButton } from "./CopyButton";
 import { DiagnosisResultCard } from "./DiagnosisResultCard";
 
 type IncidentReportCardProps = {
@@ -146,20 +147,24 @@ export function IncidentReportCard({ incident }: IncidentReportCardProps) {
             </h3>
             <div className="mt-2 space-y-2">
               {incident.repairPlan.commands.map((command) => (
-                <code
+                <div
                   key={command}
-                  className="block rounded-md bg-slate-950 px-3 py-2 font-mono text-xs text-slate-100"
+                  className="flex items-start justify-between gap-2 rounded-md bg-slate-950 px-3 py-2"
                 >
-                  {command}
-                </code>
+                  <code className="min-w-0 flex-1 break-all font-mono text-xs text-slate-100">
+                    {command}
+                  </code>
+                  <CopyButton value={command} variant="dark" />
+                </div>
               ))}
             </div>
-            <p className="mt-3 text-sm text-slate-600">
-              First command to run:{" "}
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-slate-600">
+              <span>First command to run:</span>
               <code className="rounded bg-slate-100 px-1.5 py-0.5">
                 {incident.repairPlan.nextDiagnosticCommand}
               </code>
-            </p>
+              <CopyButton value={incident.repairPlan.nextDiagnosticCommand} />
+            </div>
           </section>
         </div>
       </div>

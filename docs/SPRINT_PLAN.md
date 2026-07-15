@@ -18,6 +18,19 @@ will re-scope the affected sprints.
 3. **Big AI-vision features out of scope for now.** GitHub diff inspection and auto-fix
    PRs stay on the honest "not implemented yet" list; captured as optional future sprints.
 
+## Status (updated)
+
+- **Sprint 0 — done.** Redaction precision, dead event filter, `oac_` client-id guard,
+  `DATABASE_URL` fallback, stray file removed. Shipped with tests.
+- **Sprint 1 — done and verified live.** Implemented as **bring-your-own-token** connected
+  mode (not OAuth): a user pastes their own Vercel access token, the app fetches and
+  analyzes their latest failed deployment, and the token is never stored. This is the
+  self-serve connected path; the OAuth/webhook foundation is parked/experimental.
+- **Sprint 3 — in progress.** Copy-to-clipboard on repair commands and accessibility/feedback
+  polish are done. Deferred deliberately: in-memory rate limiting (misleading in serverless —
+  per-instance, not shared; needs a shared store to be real) and the migration-script refactor
+  (internal optimization, not user-facing; low risk to leave as `create table if not exists`).
+
 ## Current state (verified July 2026)
 
 - All gates green: `pnpm test` (81 tests), `pnpm lint`, `pnpm typecheck`, `pnpm build`.
