@@ -173,6 +173,7 @@ export function DiagnosisWorkspace() {
                 type="button"
                 onClick={handleFetchLatestDeployment}
                 disabled={isFetchingDeployment}
+                aria-busy={isFetchingDeployment}
                 className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 <PlugZap className="h-4 w-4" />
@@ -189,7 +190,10 @@ export function DiagnosisWorkspace() {
             </div>
 
             {connectedError ? (
-              <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              <div
+                role="alert"
+                className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+              >
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>{connectedError}</p>
               </div>
@@ -261,7 +265,10 @@ export function DiagnosisWorkspace() {
               </div>
 
               {error ? (
-                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                   <p>{error}</p>
                 </div>
@@ -272,6 +279,7 @@ export function DiagnosisWorkspace() {
                   type="button"
                   onClick={handleAnalyze}
                   disabled={isAnalyzing}
+                  aria-busy={isAnalyzing}
                   className="inline-flex items-center gap-2 rounded-md bg-teal-700 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
                 >
                   <ClipboardPaste className="h-4 w-4" />
@@ -281,6 +289,7 @@ export function DiagnosisWorkspace() {
                   type="button"
                   onClick={handleShare}
                   disabled={!incident || isSharing}
+                  aria-busy={isSharing}
                   className="inline-flex items-center gap-2 rounded-md border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-teal-300 hover:text-teal-800 disabled:cursor-not-allowed disabled:text-slate-400 disabled:hover:border-slate-200"
                   title={
                     incident
@@ -294,7 +303,10 @@ export function DiagnosisWorkspace() {
               </div>
 
               {shareError ? (
-                <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <div
+                  role="alert"
+                  className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+                >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                   <p>{shareError}</p>
                 </div>
