@@ -19,6 +19,22 @@ const VercelDeploymentEventsResponseSchema = z.union([
 
 export type VercelDeploymentEvent = z.infer<typeof VercelDeploymentEventSchema>;
 
+const VercelDeploymentSchema = z.object({
+  uid: z.string().optional(),
+  id: z.string().optional(),
+  name: z.string().optional(),
+  url: z.string().optional(),
+  state: z.string().optional(),
+  readyState: z.string().optional(),
+  createdAt: z.union([z.number(), z.string()]).optional()
+});
+
+const VercelDeploymentsResponseSchema = z.object({
+  deployments: z.array(VercelDeploymentSchema)
+});
+
+export type VercelDeployment = z.infer<typeof VercelDeploymentSchema>;
+
 type VercelApiOptions = {
   accessToken: string;
   teamId?: string | null;
@@ -51,6 +67,65 @@ export async function getDeploymentEvents(
 
   const parsed = VercelDeploymentEventsResponseSchema.parse(await response.json());
   return Array.isArray(parsed) ? parsed : parsed.events;
+}
+
+export async function listDeployments(
+  options: VercelApiOptions & { limit?: number }
+): Promise<VercelDeployment[]> {
+  const fetcher = options.fetcher ?? fetch;
+  const url = new URL("https://api.vercel.com/v6/deployments");
+  url.searchParams.set("limit", String(options.limit ?? 20));
+
+  if (options.teamId) {
+    url.searchParams.set("teamId", options.teamId);
+  }
+
+  const response = await fetcher(url, {
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error("Could not list Vercel deployments.");
+  }
+
+  const parsed = VercelDeploymentsResponseSchema.parse(await response.json());
+  return parsed.deployments;
+}
+
+export function findLatestFailedDeployment(
+  deployments: VercelDeployment[]
+): VercelDeployment | null {
+  const failed = deployments.filter(
+    (deployment) => (deployment.state ?? deployment.readyState) === "ERROR"
+  );
+
+  if (failed.length === 0) {
+    return null;
+  }
+
+  // v6 returns newest first, but sort defensively so we always pick the most recent.
+  return (
+    failed
+      .slice()
+      .sort((a, b) => deploymentCreatedMillis(b) - deploymentCreatedMillis(a))[0] ?? null
+  );
+}
+
+function deploymentCreatedMillis(deployment: VercelDeployment): number {
+  const value = deployment.createdAt;
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : Date.parse(value) || 0;
+  }
+
+  return 0;
 }
 
 export async function listProjects(options: VercelApiOptions): Promise<unknown> {
