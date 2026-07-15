@@ -19,12 +19,30 @@ export function redactSecrets(input: string): string {
     .replace(URL_SECRET_PARAM, "$1[REDACTED]")
     .replace(API_KEY_LIKE, "[REDACTED_SECRET]")
     .replace(LONG_SECRET, (match) => {
-      if (/^[a-f0-9]{40}$/i.test(match)) {
+      if (isEvidenceNotSecret(match)) {
         return match;
       }
 
       return "[REDACTED_SECRET]";
     });
+}
+
+// The long-token rule is a catch-all for unlabeled secrets, but some long tokens
+// are useful diagnostic evidence and almost never secret material. Preserving them
+// keeps real signal (commit SHAs, hashes, module identifiers) in the analysis while
+// still redacting high-entropy random blobs.
+function isEvidenceNotSecret(token: string): boolean {
+  // Git commit SHAs and common content hashes (sha1 = 40, sha256 = 64 hex chars).
+  if (/^[a-f0-9]{40}$/i.test(token) || /^[a-f0-9]{64}$/i.test(token)) {
+    return true;
+  }
+
+  // Real secrets are high-entropy and mix letters with digits. Pure words
+  // (identifiers, module names) or pure numbers are not secret material.
+  const hasLetter = /[A-Za-z]/.test(token);
+  const hasDigit = /[0-9]/.test(token);
+
+  return !(hasLetter && hasDigit);
 }
 
 export function toSanitizedEvidenceLines(

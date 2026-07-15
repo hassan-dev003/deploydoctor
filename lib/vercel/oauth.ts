@@ -45,6 +45,13 @@ export function assertVercelOAuthConfig(env = process.env) {
   return config as { clientId: string; clientSecret: string; redirectUri: string };
 }
 
+// Vercel integration client IDs are issued as `oac_...` values in the integration's
+// Credentials tab. Catch placeholder or wrong values before redirecting the user to
+// Vercel, where an invalid id surfaces only as a cryptic "The app ID is invalid" page.
+export function isConfiguredVercelClientId(clientId: string | undefined): boolean {
+  return typeof clientId === "string" && /^oac_[A-Za-z0-9]+$/.test(clientId);
+}
+
 export function createOAuthSession(secret: string): {
   payload: VercelOAuthCookiePayload;
   cookieValue: string;

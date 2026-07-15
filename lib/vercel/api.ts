@@ -85,17 +85,29 @@ export async function createWebhook(): Promise<never> {
 export function deploymentEventsToSanitizedLog(events: VercelDeploymentEvent[]): string {
   return events
     .map((event, index) => {
-      const text = typeof event.text === "string" ? event.text : eventToText(event);
-      return `[event ${index + 1}${event.type ? ` ${event.type}` : ""}] ${redactSecrets(text)}`;
+      const text = redactSecrets(eventContent(event)).trim();
+
+      // Drop events that carry no real log text so they do not add noise to the
+      // diagnosis prompt. The prefix is only added after this emptiness check,
+      // which is why the previous trailing filter could never remove them.
+      if (text.length === 0) {
+        return null;
+      }
+
+      return `[event ${index + 1}${event.type ? ` ${event.type}` : ""}] ${text}`;
     })
-    .filter((line) => line.trim().length > 0)
+    .filter((line): line is string => line !== null)
     .join("\n");
 }
 
-function eventToText(event: VercelDeploymentEvent): string {
+function eventContent(event: VercelDeploymentEvent): string {
+  if (typeof event.text === "string" && event.text.trim().length > 0) {
+    return event.text;
+  }
+
   if (event.payload && typeof event.payload === "object") {
     return JSON.stringify(event.payload);
   }
 
-  return event.type ?? "Vercel deployment event";
+  return "";
 }

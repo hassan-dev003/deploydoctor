@@ -6,7 +6,7 @@ import { SavedDiagnosisShareSchema, type SavedDiagnosisShare } from "./shareSche
 
 export class ShareDatabaseUnavailableError extends Error {
   constructor(
-    message = "Sharing is not configured yet. Set POSTGRES_URL or depdoc_POSTGRES_URL to enable saved report links."
+    message = "Sharing is not configured yet. Set POSTGRES_URL, depdoc_POSTGRES_URL, or DATABASE_URL to enable saved report links."
   ) {
     super(message);
     this.name = "ShareDatabaseUnavailableError";
@@ -142,7 +142,12 @@ export async function ensureShareSchema(
 }
 
 export function getPostgresUrl(): string | undefined {
-  return process.env.POSTGRES_URL || process.env.depdoc_POSTGRES_URL || undefined;
+  return (
+    process.env.POSTGRES_URL ||
+    process.env.depdoc_POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    undefined
+  );
 }
 
 function getShareSqlExecutor(): SqlExecutor {
