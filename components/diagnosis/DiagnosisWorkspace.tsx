@@ -10,24 +10,18 @@ import {
   Share2,
   Sparkles
 } from "lucide-react";
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
 import { sampleLogs } from "@/lib/diagnosis/samples";
-import { analyzePastedIncident } from "@/lib/incidents/incidentAdapter";
+import {
+  analyzeLatestFailedDeployment,
+  analyzePastedIncident
+} from "@/lib/incidents/incidentAdapter";
 import { saveIncidentForSharing } from "@/lib/incidents/shareAdapter";
 import type { IncidentReport } from "@/lib/incidents/schema";
 import { IncidentReportCard } from "./IncidentReportCard";
 
 const emptyMessage = "Paste deployment logs before running an incident analysis.";
-
-type ConnectionStatus = {
-  configured: boolean;
-  status: "not_connected" | "demo" | "connected" | "disabled";
-  projectName?: string | null;
-  projectId?: string | null;
-  hasToken: boolean;
-};
 
 export function DiagnosisWorkspace() {
   const [rawLog, setRawLog] = useState("");
@@ -38,34 +32,19 @@ export function DiagnosisWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus | null>(null);
+
+  // Bring-your-own-token connected mode. The token lives only in component state,
+  // is sent once to fetch deployment events, and is never persisted anywhere.
+  const [vercelToken, setVercelToken] = useState("");
+  const [vercelTeamId, setVercelTeamId] = useState("");
+  const [isFetchingDeployment, setIsFetchingDeployment] = useState(false);
+  const [connectedError, setConnectedError] = useState<string | null>(null);
 
   const trimmedLog = rawLog.trim();
   const lineCount = useMemo(
     () => (trimmedLog.length === 0 ? 0 : trimmedLog.split(/\r?\n/).length),
     [trimmedLog]
   );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    fetch("/api/vercel/connections/status")
-      .then((response) => (response.ok ? response.json() : null))
-      .then((status: ConnectionStatus | null) => {
-        if (isMounted) {
-          setConnectionStatus(status);
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setConnectionStatus(null);
-        }
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   async function handleAnalyze() {
     if (!trimmedLog) {
@@ -98,6 +77,33 @@ export function DiagnosisWorkspace() {
     }
   }
 
+  async function handleFetchLatestDeployment() {
+    if (!vercelToken.trim()) {
+      setConnectedError("Paste a Vercel access token first.");
+      return;
+    }
+
+    setIsFetchingDeployment(true);
+    setConnectedError(null);
+    setError(null);
+    setShareError(null);
+    setShareUrl(null);
+
+    try {
+      const result = await analyzeLatestFailedDeployment(vercelToken.trim(), vercelTeamId);
+      setSourceType("vercel_api");
+      setIncident(result);
+    } catch (caughtError) {
+      setConnectedError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "DeployDoctor could not fetch your latest failed deployment."
+      );
+    } finally {
+      setIsFetchingDeployment(false);
+    }
+  }
+
   return (
     <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8">
       <section className="mx-auto grid max-w-7xl gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)]">
@@ -122,42 +128,79 @@ export function DiagnosisWorkspace() {
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-base font-semibold text-slate-950">Connected Vercel mode</h2>
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                Status: {connectionStatus?.status?.replaceAll("_", " ") ?? "checking"}
+                Bring your own token
               </span>
             </div>
-            <div className="grid gap-3 text-sm sm:grid-cols-2">
-              <div className="rounded-md border border-teal-200 bg-teal-50 p-3 text-teal-900">
-                <div className="font-semibold">Current mode</div>
-                <p className="mt-1 leading-6">Paste logs manually and generate an incident report.</p>
-              </div>
-              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">
-                <div className="font-semibold">Next mode</div>
-                <p className="mt-1 leading-6">Authorize Vercel access and receive failure webhooks.</p>
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-slate-600">
-              Public deployment URLs cannot expose private build logs. Connected ingestion will need
-              a real Vercel authorization before DeployDoctor can fetch private deployment evidence.
+            <p className="text-sm leading-6 text-slate-600">
+              Skip the copy-paste: give DeployDoctor a Vercel access token and it will fetch the
+              events for your most recent failed deployment and analyze them directly.
             </p>
-            {connectionStatus?.status === "connected" ? (
-              <p className="mt-2 text-sm font-medium text-teal-800">
-                Connected{connectionStatus.projectName ? ` to ${connectionStatus.projectName}` : ""}.
-              </p>
-            ) : null}
-            <div className="mt-3 flex flex-wrap gap-3">
-              <Link
-                href="/api/vercel/oauth/start"
-                className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800"
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
+              <label className="sr-only" htmlFor="vercel-token">
+                Vercel access token
+              </label>
+              <input
+                id="vercel-token"
+                type="password"
+                value={vercelToken}
+                onChange={(event) => {
+                  setVercelToken(event.target.value);
+                  setConnectedError(null);
+                }}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Vercel access token"
+                className="min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none ring-teal-500 transition focus:border-teal-500 focus:ring-2"
+              />
+              <label className="sr-only" htmlFor="vercel-team">
+                Vercel team ID (optional)
+              </label>
+              <input
+                id="vercel-team"
+                type="text"
+                value={vercelTeamId}
+                onChange={(event) => setVercelTeamId(event.target.value)}
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="Team ID (optional)"
+                className="min-w-0 rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-800 outline-none ring-teal-500 transition focus:border-teal-500 focus:ring-2"
+              />
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={handleFetchLatestDeployment}
+                disabled={isFetchingDeployment}
+                className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 <PlugZap className="h-4 w-4" />
-                Connect Vercel
-              </Link>
-              <Link
-                href="/incidents"
+                {isFetchingDeployment ? "Fetching..." : "Fetch my latest failed deployment"}
+              </button>
+              <a
+                href="https://vercel.com/account/tokens"
+                target="_blank"
+                rel="noreferrer"
                 className="inline-flex items-center px-1 text-sm font-semibold text-teal-800 transition hover:text-teal-900"
               >
-                View internal webhook inbox
-              </Link>
+                Create a token
+              </a>
+            </div>
+
+            {connectedError ? (
+              <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>{connectedError}</p>
+              </div>
+            ) : null}
+
+            <div className="mt-3 flex items-start gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
+              <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+              <p>
+                Your token stays in this browser tab, is sent once to fetch deployment events, and
+                is never stored or logged. Use a short-lived token and revoke it when you are done.
+              </p>
             </div>
           </section>
 
@@ -298,14 +341,14 @@ export function DiagnosisWorkspace() {
                 <div className="rounded-md border border-teal-200 bg-teal-50 p-3 text-teal-900">
                   <div className="font-semibold">Does</div>
                   <p className="mt-1 leading-6">
-                    Pasted log analysis, redaction, evidence-backed reports, sanitized sharing.
+                    Pasted log analysis, bring-your-own-token deployment fetch, redaction,
+                    evidence-backed reports, sanitized sharing.
                   </p>
                 </div>
                 <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">
                   <div className="font-semibold">Does not yet</div>
                   <p className="mt-1 leading-6">
-                    Create Vercel webhooks automatically, refresh tokens, inspect GitHub diffs, or
-                    auto-push fixes.
+                    Receive automatic failure webhooks, inspect GitHub diffs, or auto-push fixes.
                   </p>
                 </div>
               </div>

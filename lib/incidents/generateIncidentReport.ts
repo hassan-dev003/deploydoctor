@@ -72,12 +72,20 @@ function investigationIngestTitle(sourceType: IncidentReport["sourceType"]): str
     return "Ingested authorized Vercel deployment events";
   }
 
+  if (sourceType === "vercel_api") {
+    return "Fetched your latest failed Vercel deployment";
+  }
+
   return sourceType === "sample_log" ? "Ingested sample deployment log" : "Ingested pasted deployment log";
 }
 
 function investigationIngestSummary(sourceType: IncidentReport["sourceType"]): string {
   if (sourceType === "vercel_webhook") {
     return "DeployDoctor analyzed deployment evidence fetched with an authorized Vercel connection.";
+  }
+
+  if (sourceType === "vercel_api") {
+    return "DeployDoctor used your Vercel access token to fetch events for your most recent failed deployment, then analyzed the sanitized output. The token was not stored.";
   }
 
   return sourceType === "sample_log"

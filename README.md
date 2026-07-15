@@ -57,6 +57,26 @@ Connected mode also requires manual Vercel setup for this milestone:
 - Run a real production smoke test after OAuth setup to confirm the authorized token can fetch deployment events for the target project.
 - Keep pasted-log analysis available as the fallback path if OAuth permissions or webhook delivery need adjustment.
 
+## Connected Mode (Bring Your Own Vercel Token)
+
+DeployDoctor can fetch and analyze your latest failed deployment directly, without
+copy-pasting logs. This path is fully self-serve: any user can do it with their own
+token, with no account setup or owner involvement required.
+
+1. Create a Vercel access token at `https://vercel.com/account/tokens`.
+2. On the homepage, paste the token into the **Connected Vercel mode** field. Add a
+   Team ID if the project belongs to a Vercel team.
+3. Click **Fetch my latest failed deployment**. DeployDoctor lists your recent
+   deployments, picks the most recent failed one, fetches its events, redacts obvious
+   secrets, and produces an incident report.
+
+Privacy: the token stays in your browser tab, is sent once to
+`POST /api/vercel/deployments/analyze-latest` to fetch events, and is never stored,
+logged, or returned to the client. Use a short-lived token and revoke it when finished.
+
+Requires `CEREBRAS_API_KEY` for AI analysis (falls back to the deterministic mock
+otherwise). No Postgres, OAuth app, webhook, or paid Vercel plan is needed for this path.
+
 ## Vercel Deployment
 
 The project is linked to Vercel as `deploydoctor` and deployed at:
@@ -136,7 +156,12 @@ https://deploydoctor.vercel.app
 
 See `docs/DEMO.md` for a 60-90 second hackathon video checklist.
 
-## Connected Vercel Foundation
+## Connected Vercel Foundation (Experimental / Parked)
+
+> The recommended connected path is the token-based **Connected Mode** above. The
+> OAuth + webhook foundation below is experimental and parked: the OAuth flow targets
+> Vercel's "Sign in with Vercel" identity product, and automatic webhook ingestion
+> requires a paid Vercel plan. Neither is required to fetch and analyze deployments.
 
 Milestone 7B adds the connected-mode authorization foundation:
 
@@ -160,6 +185,7 @@ Not implemented yet:
 ## Current Scope
 
 - Paste raw Vercel logs into the homepage incident analyst.
+- Or paste a Vercel access token to fetch and analyze your latest failed deployment; the token is never stored.
 - Keep raw logs only in React state.
 - Send logs to `POST /api/incidents` for incident reports; keep `POST /api/diagnoses` for legacy diagnosis clients.
 - Receive Vercel deployment failure webhook metadata at `POST /api/webhooks/vercel`.

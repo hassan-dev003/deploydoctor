@@ -1,7 +1,12 @@
 import { z } from "zod";
 import { DiagnosisResultSchema } from "@/lib/diagnosis/schema";
 
-export const IncidentSourceTypeSchema = z.enum(["pasted_log", "sample_log", "vercel_webhook"]);
+export const IncidentSourceTypeSchema = z.enum([
+  "pasted_log",
+  "sample_log",
+  "vercel_webhook",
+  "vercel_api"
+]);
 export const IncidentStatusSchema = z.enum(["needs_action", "needs_more_evidence"]);
 export const InvestigationStepStatusSchema = z.enum(["completed", "needs_action"]);
 export const EvidenceSeveritySchema = z.enum(["info", "warning", "critical"]);
