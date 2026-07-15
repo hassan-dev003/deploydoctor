@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildVercelAuthorizationUrl,
   createOAuthSession,
+  isConfiguredVercelClientId,
   parseOAuthCookie,
   validateOAuthState
 } from "@/lib/vercel/oauth";
@@ -33,5 +34,13 @@ describe("Vercel OAuth helpers", () => {
     const session = createOAuthSession("client-secret");
 
     expect(() => parseOAuthCookie(session.cookieValue, "other-secret")).toThrow();
+  });
+
+  it("recognizes real integration client IDs and rejects placeholders", () => {
+    expect(isConfiguredVercelClientId("oac_xurffZSa0MZTj5SARZ5XFg7b")).toBe(true);
+    expect(isConfiguredVercelClientId("your_oauth_client_id")).toBe(false);
+    expect(isConfiguredVercelClientId("client-id")).toBe(false);
+    expect(isConfiguredVercelClientId("")).toBe(false);
+    expect(isConfiguredVercelClientId(undefined)).toBe(false);
   });
 });
