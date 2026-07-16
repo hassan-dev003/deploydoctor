@@ -3,6 +3,7 @@ import { generateText, stepCountIs, type LanguageModel, type ToolSet } from "ai"
 import { generateServerDiagnosis } from "@/lib/diagnosis/generateServerDiagnosis";
 import { redactSecrets } from "@/lib/diagnosis/redact";
 import type { DiagnosisResult } from "@/lib/diagnosis/schema";
+import { fetchLatestFailedDeploymentLog } from "@/lib/vercel/api";
 import { generateIncidentReport } from "@/lib/incidents/generateIncidentReport";
 import type { IncidentReport } from "@/lib/incidents/schema";
 import { createInvestigationTools } from "./tools";
@@ -81,7 +82,23 @@ export async function runInvestigation(input: RunInvestigationInput): Promise<In
     return { diagnosis, trace: context.steps };
   } catch {
     // Fall back to a single-shot diagnosis over whatever sanitized evidence we gathered.
-    const fallbackLog = context.sanitizedLog ?? input.log;
+    // If the agent loop failed before reading any log (e.g. no model available), fetch the
+    // latest failed deployment deterministically so the request still returns a report.
+    let fallbackLog = context.sanitizedLog;
+
+    if (!fallbackLog) {
+      try {
+        fallbackLog =
+          (await fetchLatestFailedDeploymentLog({
+            accessToken: input.accessToken,
+            teamId: input.teamId,
+            deploymentId: input.deploymentId,
+            fetcher: input.fetcher
+          })) ?? undefined;
+      } catch {
+        // Ignore and fall through to the error below.
+      }
+    }
 
     if (!fallbackLog) {
       throw new Error(

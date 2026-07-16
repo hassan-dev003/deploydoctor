@@ -39,6 +39,25 @@ export async function analyzeLatestFailedDeployment(
   return (await response.json()) as IncidentReport;
 }
 
+export async function investigateWithAgent(
+  accessToken: string,
+  teamId?: string
+): Promise<IncidentReport> {
+  const response = await fetch("/api/agent/investigate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ accessToken, teamId: teamId?.trim() || undefined })
+  });
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  return (await response.json()) as IncidentReport;
+}
+
 async function readErrorMessage(response: Response): Promise<string> {
   try {
     const body = (await response.json()) as unknown;

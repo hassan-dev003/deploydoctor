@@ -26,7 +26,7 @@ export function IncidentReportCard({ incident }: IncidentReportCardProps) {
           <section>
             <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-950">
               <Activity className="h-4 w-4 text-teal-700" />
-              Investigation timeline
+              {incident.sourceType === "vercel_api" ? "Agent investigation" : "Investigation timeline"}
             </h3>
             <div className="mt-3 space-y-3">
               {incident.investigationSteps.map((step, index) => (

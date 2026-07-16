@@ -94,6 +94,29 @@ export async function listDeployments(
   return parsed.deployments;
 }
 
+// Deterministic path used as a non-agent fallback: find the latest failed deployment
+// (or a given one) and return its sanitized build log, or null if none is available.
+export async function fetchLatestFailedDeploymentLog(
+  options: VercelApiOptions & { deploymentId?: string; limit?: number }
+): Promise<string | null> {
+  let deploymentId = options.deploymentId;
+
+  if (!deploymentId) {
+    const deployments = await listDeployments({ ...options, limit: options.limit ?? 30 });
+    const failed = findLatestFailedDeployment(deployments);
+    deploymentId = failed?.uid ?? failed?.id;
+  }
+
+  if (!deploymentId) {
+    return null;
+  }
+
+  const events = await getDeploymentEvents(deploymentId, options);
+  const log = deploymentEventsToSanitizedLog(events);
+
+  return log.trim() ? log : null;
+}
+
 export function findLatestFailedDeployment(
   deployments: VercelDeployment[]
 ): VercelDeployment | null {

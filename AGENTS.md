@@ -20,6 +20,7 @@ DeployDoctor is a Next.js App Router project using TypeScript, Tailwind CSS, Zod
 - `lib/share/`: legacy diagnosis share request schemas, DB repository, recursive redaction before save, and client adapter.
 - `lib/security/tokenCrypto.ts`: server-only AES-GCM token encryption helpers.
 - `lib/vercel/`: OAuth helpers, API client, webhook parsing/signature processing, and connection repository.
+- `lib/agent/`: the investigation agent — a tool-calling loop (Vercel AI SDK + Cerebras) whose tools read Vercel deployment/project data (env var keys only, never values) to verify a hypothesis before reporting.
 - `tests/diagnosis/`, `tests/incidents/`, and `tests/share/`: Vitest coverage for redaction, classification, incident reports, and share behavior.
 - `docs/`: product notes, task tracking, and future technical planning.
 
@@ -67,4 +68,4 @@ Pull requests should include a summary, test results, and screenshots for visibl
 
 `DiagnosisResult` is the stable legacy contract for Cerebras output and mock fallback. `IncidentReport` is the current homepage/share contract and wraps `DiagnosisResult`. Share IDs must be unguessable and public links must never expose pasted raw logs.
 
-Vercel connected mode is a foundation only: OAuth tokens must be encrypted before storage, webhook signatures should be verified when configured, and fetched deployment events must be sanitized before they become stored incident evidence. Do not claim full marketplace integration, token refresh, GitHub diff inspection, MCP, or auto-fixes until those are actually implemented.
+The connected path is the bring-your-own-token investigation agent (`lib/agent/`): the token is used transiently and never stored, and the agent verifies its hypothesis against the real project before reporting. Fetched deployment events must always be sanitized, and environment variable values must never be requested or sent to the model (keys and targets only). The OAuth + webhook code remains a parked foundation. Agentic investigation is real and may be described as such, but do not claim GitHub diff inspection, auto-fix PRs, token refresh, or full marketplace integration until those are actually implemented.
