@@ -1,29 +1,34 @@
 import { createCerebras } from "@ai-sdk/cerebras";
 import { generateText, stepCountIs, type LanguageModel, type ToolSet } from "ai";
+import { classifyDeploymentLog } from "@/lib/diagnosis/classify";
 import { generateServerDiagnosis } from "@/lib/diagnosis/generateServerDiagnosis";
 import { redactSecrets } from "@/lib/diagnosis/redact";
 import type { DiagnosisResult } from "@/lib/diagnosis/schema";
-import { fetchLatestFailedDeploymentLog } from "@/lib/vercel/api";
 import { generateIncidentReport } from "@/lib/incidents/generateIncidentReport";
 import type { IncidentReport } from "@/lib/incidents/schema";
-import { createInvestigationTools } from "./tools";
-import type { AgentStep, InvestigationContext } from "./types";
+import {
+  deploymentEventsToSanitizedLog,
+  findLatestFailedDeployment,
+  getDeployment,
+  getDeploymentEvents,
+  listDeployments
+} from "@/lib/vercel/api";
+import { createVerificationTools } from "./tools";
+import type { InvestigationContext } from "./types";
 
 const DEFAULT_MODEL = "gpt-oss-120b";
-const MAX_STEPS = 8;
+const MAX_STEPS = 5;
+const MAX_LOG_CHARS = 20000;
 
-const SYSTEM_PROMPT = `You are DeployDoctor, an autonomous incident investigator for failed Vercel deployments.
-Work step by step using the available tools:
-1. If you were not given a deployment id, call list_recent_failed_deployments and pick the most recent failure.
-2. Call get_deployment_events to read the sanitized build log.
-3. Call classify_log on that log to get a category hint.
-4. Form a hypothesis about the root cause.
-5. VERIFY the hypothesis with a targeted tool before concluding. For a suspected missing
-   environment variable, call get_deployment to find the target environment, then
-   list_project_env_keys to check whether that variable actually exists in the failing target.
-   For build or tooling issues, call get_project_settings.
-6. Once the cause is verified, stop and briefly state the confirmed root cause and the fix.
-Never guess when a tool can confirm the answer. Do not ask the user questions.`;
+const VERIFY_SYSTEM_PROMPT = `You are DeployDoctor, an incident investigator for failed Vercel deployments.
+You are given a sanitized build log and a classifier hint. The essential evidence has already
+been gathered for you. Your job is to VERIFY the likely cause with tools before concluding:
+- If a required environment variable seems missing, call list_project_env_keys with the project
+  id and check whether that variable actually exists in the failing target.
+- If the failure looks like a build, tooling, or Node-version issue, call get_project_settings.
+Call at most a couple of tools, then briefly state the verified root cause and the fix. If the
+log already makes the cause obvious and no project data would change it, just say so and stop.
+Never ask the user questions. Environment variable values are never available to you.`;
 
 type AgentLoopConfig = {
   model?: LanguageModel;
@@ -42,63 +47,58 @@ export type RunInvestigationInput = {
   model?: LanguageModel;
   cerebrasApiKey?: string;
   fetcher?: typeof fetch;
-  // Injectable for tests: drive the tools without a live model.
+  // Injectable for tests: drive the verification tools without a live model.
   agentLoop?: AgentLoop;
 };
 
 export type InvestigationResult = {
   diagnosis: DiagnosisResult;
-  trace: AgentStep[];
+  trace: InvestigationContext["steps"];
 };
+
+type BaseEvidence = { projectId?: string; target?: string };
 
 export async function runInvestigation(input: RunInvestigationInput): Promise<InvestigationResult> {
   const context: InvestigationContext = { notes: [], steps: [] };
   const apiKey = input.cerebrasApiKey ?? process.env.CEREBRAS_API_KEY;
 
-  if (input.log) {
-    context.sanitizedLog = redactSecrets(input.log);
-  }
-
   try {
-    const tools = createInvestigationTools({
-      accessToken: input.accessToken,
-      teamId: input.teamId,
-      fetcher: input.fetcher,
-      context
-    });
+    const base = await gatherBaseEvidence(input, context);
 
-    const config: AgentLoopConfig = {
-      model: input.model,
-      system: SYSTEM_PROMPT,
-      prompt: buildPrompt(input, context),
-      tools
-    };
-
-    const result = input.agentLoop
-      ? await input.agentLoop(config)
-      : await runCerebrasLoop(config, apiKey);
-
-    const diagnosis = await synthesizeDiagnosis(context, result.text, apiKey);
-    return { diagnosis, trace: context.steps };
-  } catch {
-    // Fall back to a single-shot diagnosis over whatever sanitized evidence we gathered.
-    // If the agent loop failed before reading any log (e.g. no model available), fetch the
-    // latest failed deployment deterministically so the request still returns a report.
-    let fallbackLog = context.sanitizedLog;
-
-    if (!fallbackLog) {
+    // Best-effort agent verification layered on top of the deterministic evidence. If the
+    // model is unavailable or misbehaves, the log-based diagnosis below still stands.
+    if (context.sanitizedLog) {
       try {
-        fallbackLog =
-          (await fetchLatestFailedDeploymentLog({
-            accessToken: input.accessToken,
-            teamId: input.teamId,
-            deploymentId: input.deploymentId,
-            fetcher: input.fetcher
-          })) ?? undefined;
+        const tools = createVerificationTools({
+          accessToken: input.accessToken,
+          teamId: input.teamId,
+          fetcher: input.fetcher,
+          context
+        });
+
+        const config: AgentLoopConfig = {
+          model: input.model,
+          system: VERIFY_SYSTEM_PROMPT,
+          prompt: buildVerifyPrompt(context, base),
+          tools
+        };
+
+        const result = input.agentLoop
+          ? await input.agentLoop(config)
+          : await runCerebrasLoop(config, apiKey);
+
+        if (result.text.trim()) {
+          context.notes.push(`Agent conclusion: ${result.text.trim()}`);
+        }
       } catch {
-        // Ignore and fall through to the error below.
+        // Verification is optional; the deterministic evidence still stands.
       }
     }
+
+    const diagnosis = await synthesizeDiagnosis(context, apiKey);
+    return { diagnosis, trace: context.steps };
+  } catch {
+    const fallbackLog = context.sanitizedLog ?? (input.log ? redactSecrets(input.log) : undefined);
 
     if (!fallbackLog) {
       throw new Error(
@@ -130,6 +130,85 @@ export function buildAgentIncidentReport(
   });
 }
 
+// Deterministically resolve the failed deployment, read its sanitized log, and classify it.
+// This is the evidence floor: it does not depend on the model making the right tool calls.
+async function gatherBaseEvidence(
+  input: RunInvestigationInput,
+  context: InvestigationContext
+): Promise<BaseEvidence> {
+  if (input.log) {
+    context.sanitizedLog = redactSecrets(input.log).slice(0, MAX_LOG_CHARS);
+    recordClassification(context);
+    return {};
+  }
+
+  const apiOptions = { accessToken: input.accessToken, teamId: input.teamId, fetcher: input.fetcher };
+  let deploymentId = input.deploymentId;
+
+  if (!deploymentId) {
+    const deployments = await listDeployments({ ...apiOptions, limit: 30 });
+    const failed = deployments.filter(
+      (deployment) => (deployment.state ?? deployment.readyState) === "ERROR"
+    );
+    const latest = findLatestFailedDeployment(deployments);
+    deploymentId = latest?.uid ?? latest?.id;
+    context.steps.push({
+      tool: "list_recent_failed_deployments",
+      status: "completed",
+      summary: `Found ${failed.length} recent failed deployment(s).`
+    });
+  }
+
+  if (!deploymentId) {
+    return {};
+  }
+
+  let base: BaseEvidence = {};
+
+  try {
+    const meta = await getDeployment(deploymentId, apiOptions);
+    const shortSha =
+      typeof meta.meta?.githubCommitSha === "string" ? meta.meta.githubCommitSha.slice(0, 7) : undefined;
+    base = { projectId: meta.projectId, target: meta.target ?? undefined };
+    context.steps.push({
+      tool: "get_deployment",
+      status: "completed",
+      summary: `Inspected deployment metadata: target ${meta.target ?? "unknown"}, state ${
+        meta.readyState ?? meta.state ?? "unknown"
+      }${shortSha ? `, commit ${shortSha}` : ""}.`
+    });
+  } catch {
+    // Metadata is helpful but optional; continue to the log.
+  }
+
+  const events = await getDeploymentEvents(deploymentId, apiOptions);
+  context.sanitizedLog = deploymentEventsToSanitizedLog(events).slice(0, MAX_LOG_CHARS);
+  context.steps.push({
+    tool: "get_deployment_events",
+    status: "completed",
+    summary: `Read the sanitized build log (${events.length} event(s)).`
+  });
+
+  recordClassification(context);
+  return base;
+}
+
+function recordClassification(context: InvestigationContext): void {
+  if (!context.sanitizedLog) {
+    return;
+  }
+
+  const result = classifyDeploymentLog(context.sanitizedLog);
+  context.notes.push(`Classifier category hint: ${result.category}.`);
+  context.steps.push({
+    tool: "classify_log",
+    status: "completed",
+    summary: `Classifier hint: ${result.category.replaceAll("_", " ")} (${Math.round(
+      result.confidence * 100
+    )}%).`
+  });
+}
+
 async function runCerebrasLoop(
   config: AgentLoopConfig,
   apiKey: string | undefined
@@ -150,7 +229,6 @@ async function runCerebrasLoop(
 
 async function synthesizeDiagnosis(
   context: InvestigationContext,
-  agentText: string,
   apiKey: string | undefined
 ): Promise<DiagnosisResult> {
   const parts: string[] = [];
@@ -163,27 +241,22 @@ async function synthesizeDiagnosis(
     parts.push(`\nInvestigation notes:\n${context.notes.map((note) => `- ${note}`).join("\n")}`);
   }
 
-  if (agentText.trim()) {
-    parts.push(`\nAgent conclusion:\n${agentText.trim()}`);
-  }
-
   const findings = parts.join("\n").trim() || "(no evidence gathered)";
   return generateServerDiagnosis(findings, { apiKey });
 }
 
-function buildPrompt(input: RunInvestigationInput, context: InvestigationContext): string {
-  if (input.deploymentId) {
-    return `Investigate failed Vercel deployment "${input.deploymentId}". Fetch its events, classify the failure, verify the cause with tools, and report.`;
-  }
+function buildVerifyPrompt(context: InvestigationContext, base: BaseEvidence): string {
+  const log = (context.sanitizedLog ?? "").slice(0, 8000);
+  const hint =
+    context.notes
+      .find((note) => note.startsWith("Classifier category hint"))
+      ?.replace("Classifier category hint: ", "")
+      .replace(/\.$/, "") ?? "unknown";
+  const projectLine = base.projectId
+    ? `Project id: ${base.projectId}. Failing target: ${base.target ?? "unknown"}.`
+    : "No project id is available, so project-level tools cannot be used.";
 
-  if (context.sanitizedLog) {
-    return `Investigate this failed Vercel deployment. Sanitized build log:\n\n${context.sanitizedLog.slice(
-      0,
-      8000
-    )}\n\nClassify it, verify the likely cause with tools where possible, and report.`;
-  }
-
-  return "Find the caller's most recent failed Vercel deployment, investigate it, verify the cause, and report.";
+  return `Sanitized build log:\n\n${log}\n\nClassifier hint: ${hint}. ${projectLine}\nVerify the likely cause with a tool if it helps, then state the confirmed root cause and fix.`;
 }
 
 function humanizeTool(toolName: string): string {
