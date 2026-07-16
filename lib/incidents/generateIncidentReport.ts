@@ -5,6 +5,9 @@ import { IncidentReportSchema, type IncidentReport } from "./schema";
 
 type GenerateIncidentReportOptions = {
   sourceType?: IncidentReport["sourceType"];
+  // When provided (e.g. by the investigation agent), these replace the default canned
+  // investigation timeline so the report reflects the real steps that were taken.
+  investigationSteps?: IncidentReport["investigationSteps"];
 };
 
 export function createIncidentId(): string {
@@ -21,40 +24,45 @@ export function generateIncidentReport(
     evidenceLineToCard(line, diagnosis)
   );
 
+  const investigationSteps =
+    options.investigationSteps && options.investigationSteps.length > 0
+      ? options.investigationSteps
+      : [
+          {
+            title: investigationIngestTitle(options.sourceType ?? "pasted_log"),
+            status: "completed",
+            summary: investigationIngestSummary(options.sourceType ?? "pasted_log")
+          },
+          {
+            title: "Redacted sensitive-looking values",
+            status: "completed",
+            summary:
+              "Obvious secrets were removed before model analysis, evidence display, or share persistence."
+          },
+          {
+            title: "Classified likely failure mode",
+            status: "completed",
+            summary: `The incident matches ${diagnosis.category.replaceAll("_", " ")} with ${Math.round(
+              diagnosis.confidence * 100
+            )}% confidence.`
+          },
+          {
+            title: status === "needs_action" ? "Prepared repair plan" : "Needs more evidence",
+            status: status === "needs_action" ? "completed" : "needs_action",
+            summary:
+              status === "needs_action"
+                ? "The report includes concrete checks and commands to verify the suspected root cause."
+                : "Paste more lines around the first error before making a code or settings change."
+          }
+        ];
+
   return IncidentReportSchema.parse({
     incidentId,
     createdAt: new Date().toISOString(),
     sourceType: options.sourceType ?? "pasted_log",
     status,
     diagnosis,
-    investigationSteps: [
-      {
-        title: investigationIngestTitle(options.sourceType ?? "pasted_log"),
-        status: "completed",
-        summary: investigationIngestSummary(options.sourceType ?? "pasted_log")
-      },
-      {
-        title: "Redacted sensitive-looking values",
-        status: "completed",
-        summary:
-          "Obvious secrets were removed before model analysis, evidence display, or share persistence."
-      },
-      {
-        title: "Classified likely failure mode",
-        status: "completed",
-        summary: `The incident matches ${diagnosis.category.replaceAll("_", " ")} with ${Math.round(
-          diagnosis.confidence * 100
-        )}% confidence.`
-      },
-      {
-        title: status === "needs_action" ? "Prepared repair plan" : "Needs more evidence",
-        status: status === "needs_action" ? "completed" : "needs_action",
-        summary:
-          status === "needs_action"
-            ? "The report includes concrete checks and commands to verify the suspected root cause."
-            : "Paste more lines around the first error before making a code or settings change."
-      }
-    ],
+    investigationSteps,
     evidenceCards,
     repairPlan: {
       summary: diagnosis.rootCause,
