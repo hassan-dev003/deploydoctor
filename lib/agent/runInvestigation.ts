@@ -14,7 +14,7 @@ import {
   listDeployments
 } from "@/lib/vercel/api";
 import { createVerificationTools } from "./tools";
-import type { InvestigationContext } from "./types";
+import { humanizeToolName, recordStep, type AgentStep, type InvestigationContext } from "./types";
 
 const DEFAULT_MODEL = "gpt-oss-120b";
 const MAX_STEPS = 5;
@@ -47,6 +47,8 @@ export type RunInvestigationInput = {
   model?: LanguageModel;
   cerebrasApiKey?: string;
   fetcher?: typeof fetch;
+  // Called as each investigation step is recorded, so callers can stream the trace live.
+  onStep?: (step: AgentStep) => void;
   // Injectable for tests: drive the verification tools without a live model.
   agentLoop?: AgentLoop;
 };
@@ -59,7 +61,7 @@ export type InvestigationResult = {
 type BaseEvidence = { projectId?: string; target?: string };
 
 export async function runInvestigation(input: RunInvestigationInput): Promise<InvestigationResult> {
-  const context: InvestigationContext = { notes: [], steps: [] };
+  const context: InvestigationContext = { notes: [], steps: [], onStep: input.onStep };
   const apiKey = input.cerebrasApiKey ?? process.env.CEREBRAS_API_KEY;
 
   try {
@@ -118,7 +120,7 @@ export function buildAgentIncidentReport(
   const investigationSteps =
     result.trace.length > 0
       ? result.trace.map((step) => ({
-          title: humanizeTool(step.tool),
+          title: humanizeToolName(step.tool),
           status: step.status,
           summary: step.summary
         }))
@@ -152,7 +154,7 @@ async function gatherBaseEvidence(
     );
     const latest = findLatestFailedDeployment(deployments);
     deploymentId = latest?.uid ?? latest?.id;
-    context.steps.push({
+    recordStep(context, {
       tool: "list_recent_failed_deployments",
       status: "completed",
       summary: `Found ${failed.length} recent failed deployment(s).`
@@ -170,7 +172,7 @@ async function gatherBaseEvidence(
     const shortSha =
       typeof meta.meta?.githubCommitSha === "string" ? meta.meta.githubCommitSha.slice(0, 7) : undefined;
     base = { projectId: meta.projectId, target: meta.target ?? undefined };
-    context.steps.push({
+    recordStep(context, {
       tool: "get_deployment",
       status: "completed",
       summary: `Inspected deployment metadata: target ${meta.target ?? "unknown"}, state ${
@@ -183,7 +185,7 @@ async function gatherBaseEvidence(
 
   const events = await getDeploymentEvents(deploymentId, apiOptions);
   context.sanitizedLog = deploymentEventsToSanitizedLog(events).slice(0, MAX_LOG_CHARS);
-  context.steps.push({
+  recordStep(context, {
     tool: "get_deployment_events",
     status: "completed",
     summary: `Read the sanitized build log (${events.length} event(s)).`
@@ -200,7 +202,7 @@ function recordClassification(context: InvestigationContext): void {
 
   const result = classifyDeploymentLog(context.sanitizedLog);
   context.notes.push(`Classifier category hint: ${result.category}.`);
-  context.steps.push({
+  recordStep(context, {
     tool: "classify_log",
     status: "completed",
     summary: `Classifier hint: ${result.category.replaceAll("_", " ")} (${Math.round(
@@ -257,17 +259,4 @@ function buildVerifyPrompt(context: InvestigationContext, base: BaseEvidence): s
     : "No project id is available, so project-level tools cannot be used.";
 
   return `Sanitized build log:\n\n${log}\n\nClassifier hint: ${hint}. ${projectLine}\nVerify the likely cause with a tool if it helps, then state the confirmed root cause and fix.`;
-}
-
-function humanizeTool(toolName: string): string {
-  const labels: Record<string, string> = {
-    list_recent_failed_deployments: "Searched for the failed deployment",
-    get_deployment_events: "Read the deployment build log",
-    get_deployment: "Inspected deployment metadata",
-    get_project_settings: "Checked project settings",
-    list_project_env_keys: "Verified environment variables",
-    classify_log: "Classified the failure"
-  };
-
-  return labels[toolName] ?? toolName.replaceAll("_", " ");
 }

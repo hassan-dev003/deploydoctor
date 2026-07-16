@@ -1,8 +1,44 @@
 # DeployDoctor
 
-DeployDoctor helps developers turn failed Vercel deployments into evidence-backed incident reports.
+DeployDoctor turns failed Vercel deployments into evidence-backed incident reports. Give it a
+Vercel access token and an autonomous investigation agent finds your latest failed deployment,
+reads the build log, classifies the failure, and **verifies its hypothesis against your real
+project** (for example, checking whether a required environment variable actually exists in the
+failing environment) before writing an actionable report. You can also paste a build log directly.
 
-This repository is currently at **Milestone 7B**: a paste-first incident analyst with a Vercel authorization and authenticated log-fetching foundation. The main app still analyzes pasted logs; connected webhook ingestion can store metadata-only placeholder incidents and, when an authorized Vercel connection exists, fetch deployment events to create sanitized incident reports. The app calls Cerebras when `CEREBRAS_API_KEY` is configured and falls back to deterministic mocked diagnosis when the key is missing or the model call fails.
+Under the hood it is a small data pipeline over noisy, semi-structured build logs: ingest →
+redact secrets → classify → tool-grounded LLM extraction → schema-validated `IncidentReport` →
+optional Postgres persistence and a sanitized public share link. The agent is a tool-calling loop
+built on the Vercel AI SDK with Cerebras (`gpt-oss-120b`), and it degrades gracefully to a
+deterministic diagnosis when the model is unavailable.
+
+## How It Works (Architecture)
+
+```
+Vercel access token
+        │
+        ▼
+Resolve latest failed deployment ──► Read sanitized build log ──► Classify failure
+        │                                    (secrets redacted)         (rule-based)
+        ▼
+Agent verification loop (Vercel AI SDK + Cerebras)
+  tools: list_project_env_keys · get_project_settings   (env var VALUES never sent to the model)
+        │
+        ▼
+Structured-output synthesis ──► IncidentReport (Zod-validated)
+        │                         timeline · evidence · repair plan · safe actions
+        ▼
+Render live trace (SSE)  ·  optional sanitized share link (Postgres)
+```
+
+- **Deterministic evidence floor:** resolving the deployment, reading the log, and classifying it
+  happen without the model, so the essential evidence is always gathered. The agent runs a focused
+  verification loop on top; if it fails, the log-based diagnosis still stands.
+- **Privacy by construction:** raw logs are never persisted, secrets are redacted before any model
+  call or storage, and environment variable **values** are never requested or sent to the model
+  (keys and targets only). The access token is used transiently and never stored.
+- **Typed contracts:** `DiagnosisResult` and `IncidentReport` are defined with Zod and validated at
+  every boundary. The build gate runs tests, lint, typecheck, and a production build.
 
 ## Local Setup
 
@@ -148,21 +184,20 @@ pnpm build
 
 Creates a production Next.js build.
 
-## Demo Walkthrough
+## Walkthrough
 
-Use the production app or local dev server:
+Use the production app or a local dev server (`https://deploydoctor.vercel.app`):
 
-```bash
-https://deploydoctor.vercel.app
-```
-
-1. Choose a sample log such as `Missing Production env var`, `Case-sensitive import failure`, or `Lockfile mismatch`.
-2. Click `Analyze incident` and point out the investigation timeline, evidence cards, repair plan, safe actions, and legacy diagnosis details.
-3. Click `Share incident` and open the generated `/i/[shareId]` page.
-4. Explain that the shared page stores only sanitized incident report JSON, not the pasted raw log.
-5. For a fallback demo, run without `CEREBRAS_API_KEY` locally and repeat the same flow; the UI shape stays the same with `generatedBy: mock`.
-
-See `docs/DEMO.md` for a 60-90 second hackathon video checklist.
+- **Agent path:** paste a Vercel access token into the **Investigation agent** field and click
+  **Investigate my latest failure**. Watch the live trace stream in (searched → read log →
+  classified → verified against the project), then review the incident report.
+- **Paste path:** choose a sample log (for example `Missing Production env var` or
+  `Case-sensitive import failure`), click `Analyze incident`, and review the timeline, evidence
+  cards, repair plan, and safe actions.
+- **Share:** click `Share incident` to open the generated `/i/[shareId]` page. It stores only
+  sanitized incident JSON, never the raw log.
+- **Graceful fallback:** without `CEREBRAS_API_KEY` the same flow returns a deterministic
+  diagnosis (`generatedBy: mock`).
 
 ## Connected Vercel Foundation (Experimental / Parked)
 

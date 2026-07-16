@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { getProjectSettings, listProjectEnvKeys } from "@/lib/vercel/api";
-import type { AgentStep, InvestigationContext } from "./types";
+import { recordStep, type InvestigationContext } from "./types";
 
 type ToolContext = {
   accessToken: string;
@@ -16,8 +16,8 @@ type ToolContext = {
 export function createVerificationTools({ accessToken, teamId, fetcher, context }: ToolContext) {
   const apiOptions = { accessToken, teamId, fetcher };
 
-  function record(step: AgentStep) {
-    context.steps.push(step);
+  function record(step: Parameters<typeof recordStep>[1]) {
+    recordStep(context, step);
   }
 
   return {
