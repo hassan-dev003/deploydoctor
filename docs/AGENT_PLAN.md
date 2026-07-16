@@ -71,8 +71,11 @@ Step 3 is grounded verification, not guessing — that is the agentic differenti
   `getProjectSettings`, `listProjectEnvKeys` with values stripped), the `lib/agent`
   tool set + tool-calling loop (Vercel AI SDK + Cerebras) with a deterministic fallback,
   and the real tool trace mapped into the incident report's investigation timeline. Tested.
-- **AG-2 — next.** Wire the agent into a route + UI, render the trace, update honest copy.
-- **AG-3 — pending.** Verification-first tuning, streaming, demo.
+- **AG-2 — done.** `POST /api/agent/investigate` (BYO-token, transient), "Investigate my
+  latest failure" is the primary connected action, the agent's real tool trace renders as the
+  report's "Agent investigation" timeline, and README/AGENTS.md/UI copy now describe genuine
+  agent behavior. A deterministic fetch fallback keeps the route working without a live model.
+- **AG-3 — next.** Verification-first tuning, streaming the trace, demo.
 
 ## Sprints
 

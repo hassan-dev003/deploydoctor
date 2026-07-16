@@ -13,10 +13,7 @@ import {
 import { useMemo, useState } from "react";
 import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
 import { sampleLogs } from "@/lib/diagnosis/samples";
-import {
-  analyzeLatestFailedDeployment,
-  analyzePastedIncident
-} from "@/lib/incidents/incidentAdapter";
+import { analyzePastedIncident, investigateWithAgent } from "@/lib/incidents/incidentAdapter";
 import { saveIncidentForSharing } from "@/lib/incidents/shareAdapter";
 import type { IncidentReport } from "@/lib/incidents/schema";
 import { IncidentReportCard } from "./IncidentReportCard";
@@ -34,10 +31,10 @@ export function DiagnosisWorkspace() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   // Bring-your-own-token connected mode. The token lives only in component state,
-  // is sent once to fetch deployment events, and is never persisted anywhere.
+  // is sent once for the agent to fetch evidence, and is never persisted anywhere.
   const [vercelToken, setVercelToken] = useState("");
   const [vercelTeamId, setVercelTeamId] = useState("");
-  const [isFetchingDeployment, setIsFetchingDeployment] = useState(false);
+  const [isInvestigating, setIsInvestigating] = useState(false);
   const [connectedError, setConnectedError] = useState<string | null>(null);
 
   const trimmedLog = rawLog.trim();
@@ -77,30 +74,30 @@ export function DiagnosisWorkspace() {
     }
   }
 
-  async function handleFetchLatestDeployment() {
+  async function handleInvestigate() {
     if (!vercelToken.trim()) {
       setConnectedError("Paste a Vercel access token first.");
       return;
     }
 
-    setIsFetchingDeployment(true);
+    setIsInvestigating(true);
     setConnectedError(null);
     setError(null);
     setShareError(null);
     setShareUrl(null);
 
     try {
-      const result = await analyzeLatestFailedDeployment(vercelToken.trim(), vercelTeamId);
+      const result = await investigateWithAgent(vercelToken.trim(), vercelTeamId);
       setSourceType("vercel_api");
       setIncident(result);
     } catch (caughtError) {
       setConnectedError(
         caughtError instanceof Error
           ? caughtError.message
-          : "DeployDoctor could not fetch your latest failed deployment."
+          : "The investigation agent could not complete with this token."
       );
     } finally {
-      setIsFetchingDeployment(false);
+      setIsInvestigating(false);
     }
   }
 
@@ -126,14 +123,15 @@ export function DiagnosisWorkspace() {
 
           <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-base font-semibold text-slate-950">Connected Vercel mode</h2>
+              <h2 className="text-base font-semibold text-slate-950">Investigation agent</h2>
               <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
                 Bring your own token
               </span>
             </div>
             <p className="text-sm leading-6 text-slate-600">
-              Skip the copy-paste: give DeployDoctor a Vercel access token and it will fetch the
-              events for your most recent failed deployment and analyze them directly.
+              Give DeployDoctor a Vercel access token and it investigates on its own: it finds your
+              latest failed deployment, reads the build log, forms a hypothesis, and verifies it
+              against your real project settings and environment variables before reporting.
             </p>
 
             <div className="mt-3 grid gap-2 sm:grid-cols-[minmax(0,1fr)_180px]">
@@ -171,13 +169,13 @@ export function DiagnosisWorkspace() {
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={handleFetchLatestDeployment}
-                disabled={isFetchingDeployment}
-                aria-busy={isFetchingDeployment}
+                onClick={handleInvestigate}
+                disabled={isInvestigating}
+                aria-busy={isInvestigating}
                 className="inline-flex items-center gap-2 rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 <PlugZap className="h-4 w-4" />
-                {isFetchingDeployment ? "Fetching..." : "Fetch my latest failed deployment"}
+                {isInvestigating ? "Investigating..." : "Investigate my latest failure"}
               </button>
               <a
                 href="https://vercel.com/account/tokens"
@@ -202,8 +200,9 @@ export function DiagnosisWorkspace() {
             <div className="mt-3 flex items-start gap-2 rounded-md border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">
               <Lock className="mt-0.5 h-4 w-4 shrink-0" />
               <p>
-                Your token stays in this browser tab, is sent once to fetch deployment events, and
-                is never stored or logged. Use a short-lived token and revoke it when you are done.
+                Your token stays in this browser tab, is sent once for the agent to fetch evidence,
+                and is never stored or logged. The agent only reads deployment events and project
+                settings (env var names, never values). Use a short-lived token and revoke it when done.
               </p>
             </div>
           </section>
@@ -353,8 +352,8 @@ export function DiagnosisWorkspace() {
                 <div className="rounded-md border border-teal-200 bg-teal-50 p-3 text-teal-900">
                   <div className="font-semibold">Does</div>
                   <p className="mt-1 leading-6">
-                    Pasted log analysis, bring-your-own-token deployment fetch, redaction,
-                    evidence-backed reports, sanitized sharing.
+                    Agentic investigation of a failed deployment (reads logs, verifies against your
+                    project), pasted-log analysis, redaction, evidence-backed reports, sanitized sharing.
                   </p>
                 </div>
                 <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-slate-700">

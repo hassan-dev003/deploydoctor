@@ -57,25 +57,33 @@ Connected mode also requires manual Vercel setup for this milestone:
 - Run a real production smoke test after OAuth setup to confirm the authorized token can fetch deployment events for the target project.
 - Keep pasted-log analysis available as the fallback path if OAuth permissions or webhook delivery need adjustment.
 
-## Connected Mode (Bring Your Own Vercel Token)
+## Connected Mode: Investigation Agent (Bring Your Own Vercel Token)
 
-DeployDoctor can fetch and analyze your latest failed deployment directly, without
-copy-pasting logs. This path is fully self-serve: any user can do it with their own
-token, with no account setup or owner involvement required.
+Give DeployDoctor a Vercel access token and its investigation agent works autonomously: it
+finds your latest failed deployment, reads the build log, classifies the failure, forms a
+hypothesis, and verifies it against your real project — for example checking whether a
+required environment variable actually exists in the failing target — before writing the
+report. It is a genuine tool-calling agent (Vercel AI SDK + Cerebras), not a single prompt.
+This path is fully self-serve: any user can use it with their own token, with no account
+setup or owner involvement required.
 
 1. Create a Vercel access token at `https://vercel.com/account/tokens`.
-2. On the homepage, paste the token into the **Connected Vercel mode** field. Add a
-   Team ID if the project belongs to a Vercel team.
-3. Click **Fetch my latest failed deployment**. DeployDoctor lists your recent
-   deployments, picks the most recent failed one, fetches its events, redacts obvious
-   secrets, and produces an incident report.
+2. On the homepage, paste the token into the **Investigation agent** field. Add a Team ID
+   if the project belongs to a Vercel team.
+3. Click **Investigate my latest failure**. The agent calls the Vercel API with your token
+   to gather and verify evidence, then produces an incident report whose timeline shows the
+   real steps it took.
 
-Privacy: the token stays in your browser tab, is sent once to
-`POST /api/vercel/deployments/analyze-latest` to fetch events, and is never stored,
-logged, or returned to the client. Use a short-lived token and revoke it when finished.
+The agent's tools: list recent failed deployments, read sanitized deployment events, read
+deployment metadata, read project settings, and list environment variable **keys and targets
+only** — values are never requested or sent to the model.
 
-Requires `CEREBRAS_API_KEY` for AI analysis (falls back to the deterministic mock
-otherwise). No Postgres, OAuth app, webhook, or paid Vercel plan is needed for this path.
+Privacy: the token stays in your browser tab, is sent once to `POST /api/agent/investigate`,
+and is never stored, logged, or returned to the client. Use a short-lived token and revoke it
+when finished.
+
+Requires `CEREBRAS_API_KEY` for the agent (it falls back to a deterministic single-shot
+diagnosis otherwise). No Postgres, OAuth app, webhook, or paid Vercel plan is needed.
 
 ## Vercel Deployment
 
