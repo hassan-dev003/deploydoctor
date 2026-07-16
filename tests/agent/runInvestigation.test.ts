@@ -1,9 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildAgentIncidentReport,
   runInvestigation,
   type AgentLoop
 } from "@/lib/agent/runInvestigation";
+
+// Keep this test hermetic: force the mock diagnosis path so nothing calls the real
+// Cerebras API, even when CEREBRAS_API_KEY is present in the environment (e.g. on Vercel).
+beforeEach(() => {
+  vi.stubEnv("CEREBRAS_API_KEY", "");
+});
 
 function jsonResponse(body: unknown, ok = true): Response {
   return { ok, json: async () => body } as unknown as Response;
