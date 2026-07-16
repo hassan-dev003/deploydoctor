@@ -75,7 +75,12 @@ Step 3 is grounded verification, not guessing — that is the agentic differenti
   latest failure" is the primary connected action, the agent's real tool trace renders as the
   report's "Agent investigation" timeline, and README/AGENTS.md/UI copy now describe genuine
   agent behavior. A deterministic fetch fallback keeps the route working without a live model.
-- **AG-3 — next.** Verification-first tuning, streaming the trace, demo.
+- **AG-3 — in progress.** Reworked the agent to a reliable shape: the essential evidence
+  (find failed deployment → read log → classify) is now gathered **deterministically**, and the
+  agent runs a focused **verification** loop on top (env keys / project settings). This fixes the
+  real failure mode seen in production (the model looped on metadata and never read the log) and
+  the metadata over-redaction (branch ref dropped from step summaries). Remaining: stream the
+  trace live, and a demo script.
 
 ## Sprints
 
