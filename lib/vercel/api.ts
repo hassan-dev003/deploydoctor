@@ -128,6 +128,112 @@ function deploymentCreatedMillis(deployment: VercelDeployment): number {
   return 0;
 }
 
+const VercelDeploymentDetailSchema = z.object({
+  uid: z.string().optional(),
+  id: z.string().optional(),
+  name: z.string().optional(),
+  url: z.string().optional(),
+  readyState: z.string().optional(),
+  state: z.string().optional(),
+  target: z.string().nullable().optional(),
+  projectId: z.string().optional(),
+  meta: z.record(z.string(), z.unknown()).optional()
+});
+
+export type VercelDeploymentDetail = z.infer<typeof VercelDeploymentDetailSchema>;
+
+const VercelProjectSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
+  framework: z.string().nullable().optional(),
+  nodeVersion: z.string().optional(),
+  buildCommand: z.string().nullable().optional(),
+  installCommand: z.string().nullable().optional(),
+  outputDirectory: z.string().nullable().optional(),
+  rootDirectory: z.string().nullable().optional()
+});
+
+export type VercelProjectSettings = z.infer<typeof VercelProjectSchema>;
+
+const VercelEnvSchema = z.object({
+  key: z.string(),
+  target: z.union([z.array(z.string()), z.string()]).optional(),
+  type: z.string().optional()
+});
+
+const VercelEnvsResponseSchema = z.object({ envs: z.array(VercelEnvSchema) });
+
+export type VercelEnvKey = { key: string; targets: string[] };
+
+async function vercelGet(url: URL, options: VercelApiOptions): Promise<Response> {
+  const fetcher = options.fetcher ?? fetch;
+
+  if (options.teamId) {
+    url.searchParams.set("teamId", options.teamId);
+  }
+
+  return fetcher(url, {
+    headers: {
+      Authorization: `Bearer ${options.accessToken}`
+    }
+  });
+}
+
+export async function getDeployment(
+  deploymentId: string,
+  options: VercelApiOptions
+): Promise<VercelDeploymentDetail> {
+  const url = new URL(
+    `https://api.vercel.com/v13/deployments/${encodeURIComponent(deploymentId)}`
+  );
+  const response = await vercelGet(url, options);
+
+  if (!response.ok) {
+    throw new Error("Could not fetch the Vercel deployment.");
+  }
+
+  return VercelDeploymentDetailSchema.parse(await response.json());
+}
+
+export async function getProjectSettings(
+  projectIdOrName: string,
+  options: VercelApiOptions
+): Promise<VercelProjectSettings> {
+  const url = new URL(
+    `https://api.vercel.com/v9/projects/${encodeURIComponent(projectIdOrName)}`
+  );
+  const response = await vercelGet(url, options);
+
+  if (!response.ok) {
+    throw new Error("Could not fetch the Vercel project settings.");
+  }
+
+  return VercelProjectSchema.parse(await response.json());
+}
+
+// Returns env var keys and their targets only. Values are never requested or returned,
+// so no secret material is exposed to the agent or the model.
+export async function listProjectEnvKeys(
+  projectIdOrName: string,
+  options: VercelApiOptions
+): Promise<VercelEnvKey[]> {
+  const url = new URL(
+    `https://api.vercel.com/v9/projects/${encodeURIComponent(projectIdOrName)}/env`
+  );
+  const response = await vercelGet(url, options);
+
+  if (!response.ok) {
+    throw new Error("Could not list Vercel project environment variables.");
+  }
+
+  const parsed = VercelEnvsResponseSchema.parse(await response.json());
+
+  return parsed.envs.map((env) => ({
+    key: env.key,
+    targets: Array.isArray(env.target) ? env.target : env.target ? [env.target] : []
+  }));
+}
+
 export async function listProjects(options: VercelApiOptions): Promise<unknown> {
   const fetcher = options.fetcher ?? fetch;
   const url = new URL("https://api.vercel.com/v9/projects");

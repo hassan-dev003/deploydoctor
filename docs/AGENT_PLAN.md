@@ -65,6 +65,15 @@ Step 3 is grounded verification, not guessing — that is the agentic differenti
 
 ---
 
+## Status
+
+- **AG-1 — done.** Agent core shipped: Vercel read tools (`getDeployment`,
+  `getProjectSettings`, `listProjectEnvKeys` with values stripped), the `lib/agent`
+  tool set + tool-calling loop (Vercel AI SDK + Cerebras) with a deterministic fallback,
+  and the real tool trace mapped into the incident report's investigation timeline. Tested.
+- **AG-2 — next.** Wire the agent into a route + UI, render the trace, update honest copy.
+- **AG-3 — pending.** Verification-first tuning, streaming, demo.
+
 ## Sprints
 
 ### Sprint AG-1 — Agent foundation (tools + loop)
