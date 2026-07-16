@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  Activity,
   AlertTriangle,
+  CheckCircle2,
   Clipboard,
   ClipboardPaste,
   Link2,
@@ -13,7 +15,12 @@ import {
 import { useMemo, useState } from "react";
 import { MAX_LOG_CHARS, oversizedLogMessage } from "@/lib/diagnosis/constants";
 import { sampleLogs } from "@/lib/diagnosis/samples";
-import { analyzePastedIncident, investigateWithAgent } from "@/lib/incidents/incidentAdapter";
+import { humanizeToolName } from "@/lib/agent/types";
+import {
+  analyzePastedIncident,
+  investigateWithAgentStream,
+  type AgentStepView
+} from "@/lib/incidents/incidentAdapter";
 import { saveIncidentForSharing } from "@/lib/incidents/shareAdapter";
 import type { IncidentReport } from "@/lib/incidents/schema";
 import { IncidentReportCard } from "./IncidentReportCard";
@@ -36,6 +43,7 @@ export function DiagnosisWorkspace() {
   const [vercelTeamId, setVercelTeamId] = useState("");
   const [isInvestigating, setIsInvestigating] = useState(false);
   const [connectedError, setConnectedError] = useState<string | null>(null);
+  const [liveSteps, setLiveSteps] = useState<AgentStepView[]>([]);
 
   const trimmedLog = rawLog.trim();
   const lineCount = useMemo(
@@ -85,9 +93,14 @@ export function DiagnosisWorkspace() {
     setError(null);
     setShareError(null);
     setShareUrl(null);
+    setLiveSteps([]);
 
     try {
-      const result = await investigateWithAgent(vercelToken.trim(), vercelTeamId);
+      const result = await investigateWithAgentStream(
+        vercelToken.trim(),
+        vercelTeamId,
+        (step) => setLiveSteps((previous) => [...previous, step])
+      );
       setSourceType("vercel_api");
       setIncident(result);
     } catch (caughtError) {
@@ -194,6 +207,35 @@ export function DiagnosisWorkspace() {
               >
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>{connectedError}</p>
+              </div>
+            ) : null}
+
+            {isInvestigating && liveSteps.length > 0 ? (
+              <div
+                aria-live="polite"
+                className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3"
+              >
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-950">
+                  <Activity className="h-4 w-4 text-teal-700" />
+                  Agent investigating…
+                </div>
+                <ol className="space-y-1.5">
+                  {liveSteps.map((step, index) => (
+                    <li
+                      key={`${step.tool}-${index}`}
+                      className="flex items-start gap-2 text-sm text-slate-700"
+                    >
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-teal-600" />
+                      <span>
+                        <span className="font-medium text-slate-900">
+                          {humanizeToolName(step.tool)}
+                        </span>
+                        {" — "}
+                        {step.summary}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
               </div>
             ) : null}
 
